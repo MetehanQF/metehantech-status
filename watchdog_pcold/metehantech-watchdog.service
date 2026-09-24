@@ -1,0 +1,26 @@
+[Unit]
+Description=MetehanTech external Raspberry Pi watchdog
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=metehantech-watchdog
+WorkingDirectory=/opt/metehantech-watchdog
+# Ag adresleri kaynak kodda sabit degildir. Bu dosya PcOld uzerinde
+# root:root 0600 olarak olusturulmalidir; icerigi:
+#   PI5_LAN_IP=<Pi5 LAN adresi>
+#   PCOLD_LAN_IP=<PcOld LAN adresi>
+# Eksikse watchdog yanlis bir host'u izlemek yerine acik hatayla durur.
+EnvironmentFile=-/etc/metehantech-watchdog/network.env
+ExecStart=/usr/bin/python3 /opt/metehantech-watchdog/watchdog.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

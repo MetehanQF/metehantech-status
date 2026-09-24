@@ -1,0 +1,2 @@
+metehanbackup ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block metehantech-backup-export.service
+

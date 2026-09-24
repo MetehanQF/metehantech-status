@@ -1,0 +1,2 @@
+metehanqf ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block metehantech-backup-pi.service, /usr/bin/systemctl start --no-block metehantech-backup-pcold.service
+

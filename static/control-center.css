@@ -1,0 +1,296 @@
+/* ===========================================================================
+   Control Center shell: tab bar, view grid, generic data card, health banner,
+   timeline. Tokens come from design-system.css.
+   =========================================================================== */
+
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------------ tab bar */
+
+.cc-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding: var(--sp-3) 0;
+  margin-bottom: var(--sp-2);
+  background: linear-gradient(180deg, rgba(11, 8, 18, 0.96) 70%, rgba(11, 8, 18, 0.72));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.cc-nav button {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  padding: 11px 17px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font: 720 var(--fs-sm)/1.2 var(--font-sans);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease),
+              background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+
+.cc-nav button:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text-1);
+  box-shadow: var(--glow-purple);
+}
+
+.cc-nav button[aria-pressed="true"] {
+  border-color: rgba(196, 181, 253, 0.45);
+  background: linear-gradient(135deg, var(--purple), var(--indigo));
+  color: var(--text-inverse);
+  box-shadow: var(--glow-purple-strong), var(--inset-hi);
+}
+
+/* --------------------------------------------------------------- health banner */
+
+/* Same backend text ("ALL SYSTEMS OPERATIONAL · 0 critical / 0 warning") and the
+   same source data, rendered as a system-health banner. The accent is keyed off
+   data-health, which the existing render() writes from the health it already has,
+   so green never appears for anything but a genuinely healthy rollup. Before the
+   first sample arrives there is no data-health and the banner stays neutral. */
+#cc-global-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 var(--sp-5);
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: linear-gradient(100deg, var(--surface-3), var(--surface-1) 62%);
+  color: var(--text-2);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#cc-global-status::before {
+  content: "";
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+  box-shadow: 0 0 0 4px var(--surface-3);
+}
+
+#cc-global-status[data-health="HEALTHY"] {
+  border-color: var(--ok-edge);
+  background: linear-gradient(100deg, var(--ok-dim), var(--surface-1) 62%);
+  color: var(--text-1);
+}
+
+#cc-global-status[data-health="HEALTHY"]::before { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-dim); }
+
+#cc-global-status[data-health="WARNING"],
+#cc-global-status[data-health="DEGRADED"] {
+  border-color: var(--warn-edge);
+  background: linear-gradient(100deg, var(--warn-dim), var(--surface-1) 62%);
+  color: var(--warn);
+}
+
+#cc-global-status[data-health="WARNING"]::before,
+#cc-global-status[data-health="DEGRADED"]::before { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-dim); }
+
+#cc-global-status[data-health="CRITICAL"],
+#cc-global-status[data-health="OFFLINE"],
+#cc-global-status.cc-global-critical {
+  border-color: var(--crit-edge);
+  background: linear-gradient(100deg, var(--crit-dim), var(--surface-1) 62%);
+  color: var(--crit);
+}
+
+#cc-global-status[data-health="CRITICAL"]::before,
+#cc-global-status[data-health="OFFLINE"]::before,
+#cc-global-status.cc-global-critical::before { background: var(--crit); box-shadow: 0 0 0 4px var(--crit-dim); }
+
+/* ------------------------------------------------------------------- layout */
+
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--sp-4);
+  margin: var(--sp-5) 0;
+}
+
+.cc-view > h2 {
+  margin: var(--sp-7) 0 var(--sp-3);
+  font-size: var(--fs-section);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.cc-view > h2:first-child { margin-top: var(--sp-4); }
+
+.cc-hero {
+  padding: var(--sp-7);
+  margin: var(--sp-5) 0;
+  background:
+    radial-gradient(ellipse 70% 120% at 0% 0%, rgba(124, 58, 237, 0.22), transparent 68%),
+    linear-gradient(140deg, var(--surface-3), var(--surface-1));
+  border-color: var(--border-strong);
+}
+
+.cc-hero h2 { margin: 0; font-size: clamp(24px, 3.4vw, 38px); font-weight: 760; letter-spacing: -0.04em; }
+.cc-hero #cc-age { margin: var(--sp-3) 0 0; color: var(--text-2); font-size: var(--fs-body); }
+
+/* render() writes `cc-state <HEALTH>` onto the hero <h2>, which would otherwise
+   shrink the headline into a small pill. Keep the state colour, drop the chip
+   chrome, and scale the status dot up to headline size. */
+.cc-hero h2.cc-state {
+  display: flex;
+  padding: 0;
+  gap: var(--sp-3);
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: clamp(24px, 3.4vw, 38px);
+  font-weight: 760;
+  letter-spacing: -0.04em;
+  text-transform: none;
+}
+
+.cc-hero h2.cc-state::before {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  align-self: center;
+  box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.cc-hero h2.cc-state:not(.HEALTHY):not(.RUNNING):not(.WARNING):not(.DEGRADED):not(.CRITICAL):not(.OFFLINE):not(.FAILED):not(.STOPPED) { color: var(--text-2); }
+
+/* --------------------------------------------------------------- data card */
+
+/* The card body is produced by JS as <h3> + <span.cc-state> + <dl>. A two
+   column grid turns those siblings into a proper header without touching JS. */
+.cc-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--sp-3) var(--sp-3);
+  align-content: start;
+  padding: var(--sp-5);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cc-card > h3 { grid-column: 1; margin: 0; font-size: var(--fs-card-title); font-weight: 700; letter-spacing: -0.02em; }
+.cc-card > .cc-state { grid-column: 2; justify-self: end; }
+.cc-card > dl, .cc-card > p, .cc-card > progress, .cc-card > .dns-table-wrap,
+.cc-card > div, .cc-card > ul, .cc-card > canvas, .cc-card > section { grid-column: 1 / -1; }
+
+.cc-card dl { margin: 0; }
+.cc-card dl div { display: flex; justify-content: space-between; gap: var(--sp-4); padding: 9px 0; border-bottom: 1px solid var(--border-faint); }
+.cc-card dl div:last-child { border-bottom: 0; }
+.cc-card dt { color: var(--text-3); font-size: var(--fs-sm); }
+.cc-card dd { margin: 0; max-width: 62%; color: var(--text-1); font-size: var(--fs-sm); font-weight: 650; text-align: right; }
+
+.cc-card progress {
+  width: 100%;
+  height: 8px;
+  border: 0;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  accent-color: var(--purple-hi);
+  background: var(--surface-3);
+}
+
+.cc-card progress::-webkit-progress-bar { background: var(--surface-3); border-radius: var(--r-pill); }
+.cc-card progress::-webkit-progress-value { background: linear-gradient(90deg, var(--purple), var(--purple-hi)); border-radius: var(--r-pill); }
+
+/* --------------------------------------------------------------- cc status */
+
+/* JS writes the raw state word as the class: HEALTHY / RUNNING / WARNING /
+   DEGRADED / CRITICAL / OFFLINE / UNKNOWN / PAUSED / FAILED / STOPPED. */
+.cc-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  color: var(--text-3);
+  font-size: var(--fs-eyebrow);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.cc-state::before { content: ""; width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; }
+.cc-state.HEALTHY, .cc-state.RUNNING { color: var(--ok); border-color: var(--ok-edge); background: var(--ok-dim); }
+.cc-state.WARNING, .cc-state.DEGRADED, .cc-state.PAUSED { color: var(--warn); border-color: var(--warn-edge); background: var(--warn-dim); }
+.cc-state.CRITICAL, .cc-state.OFFLINE, .cc-state.FAILED, .cc-state.STOPPED { color: var(--crit); border-color: var(--crit-edge); background: var(--crit-dim); }
+
+/* ---------------------------------------------------------------- cc alerts */
+
+.cc-alert {
+  position: relative;
+  margin: var(--sp-2) 0;
+  padding: 13px 18px 13px 20px;
+  border: 1px solid var(--warn-edge);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--r-md);
+  background: linear-gradient(100deg, var(--warn-dim), var(--surface-1) 60%);
+  color: var(--text-1);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.cc-alert.critical { border-color: var(--crit-edge); border-left-color: var(--crit); background: linear-gradient(100deg, var(--crit-dim), var(--surface-1) 60%); }
+.cc-alert.info { border-color: var(--info-edge); border-left-color: var(--info); background: linear-gradient(100deg, var(--info-dim), var(--surface-1) 60%); }
+
+.cc-global-critical { border-color: var(--crit-edge) !important; color: var(--crit) !important; }
+
+/* -------------------------------------------------------------- timeline */
+
+.cc-timeline-row { padding: var(--sp-3) 0; border-bottom: 1px solid var(--border-faint); color: var(--text-1); font-size: var(--fs-body); }
+.cc-timeline-row:last-child { border-bottom: 0; }
+.cc-timeline-row small { display: block; margin-top: 4px; color: var(--text-3); font-size: var(--fs-micro); }
+
+/* ---------------------------------------------------------------- overview */
+
+#cc-preview { max-width: 100%; height: auto; border-radius: var(--r-lg); margin-top: var(--sp-4); border: 1px solid var(--border); }
+
+#view-overview .admin-actions { flex-wrap: wrap; border-top: 0; padding-top: 0; }
+#view-overview .admin-actions > * { flex: 1 1 200px; min-height: var(--tap); }
+
+/* ================================================================ responsive */
+
+/* 12.4" tablet: the tab bar scrolls horizontally rather than wrapping, and
+   every tab keeps its 44px tap target. */
+@media (max-width: 1180px) {
+  .cc-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .cc-nav { margin-inline: calc(var(--sp-6) * -1); padding-inline: var(--sp-6); }
+  .cc-hero { padding: var(--sp-6); }
+}
+
+@media (max-width: 600px) {
+  .cc-card { padding: var(--sp-4); }
+  .cc-card dl div { font-size: var(--fs-sm); }
+  .cc-nav { margin-inline: calc(var(--sp-4) * -1); padding-inline: var(--sp-4); }
+  .topbar { flex-wrap: wrap; gap: var(--sp-3); height: auto; padding: var(--sp-3) 0; }
+  .heading-ornament { display: none; }
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0712">
+  <title>Admin Login / MetehanTech</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css', v='ds-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='ds-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css', v='ds-1') }}">
+</head>
+<body>
+  <div class="page-shell admin-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><span>MetehanTech <span class="brand-light">/ Control</span></span></div>
+      <a class="admin-public-link" href="{{ url_for('index') }}">Public status</a>
+    </header>
+    <main class="login-main">
+      <section class="panel login-panel" aria-labelledby="login-title">
+        <p class="eyebrow">CONTROL CENTER / AUTHENTICATION</p>
+        <h1 id="login-title">Admin access</h1>
+        <p class="subtitle">Authenticate to manage approved MetehanTech services.</p>
+        {% if error %}<p class="admin-alert error" role="alert">{{ error }}</p>{% endif %}
+        {% if not configured %}<p class="admin-alert warning" role="alert">Admin login is not configured. Set <code>ADMIN_PASSWORD_HASH</code> in the service environment.</p>{% endif %}
+        <form class="login-form" method="post" action="{{ url_for('admin.login_submit') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label for="password">Admin password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="1024" required autofocus>
+          <button class="admin-button primary" type="submit"{% if not configured %} disabled{% endif %}>Sign in</button>
+        </form>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

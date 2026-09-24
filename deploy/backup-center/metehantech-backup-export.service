@@ -1,0 +1,17 @@
+[Unit]
+Description=MetehanTech Backup Center - fixed-source PcOld exporter
+After=docker.service metehantech-watchdog.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /usr/local/libexec/metehantech-backup-pcold-export
+UMask=0027
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/metehantech-backup
+

@@ -1,0 +1,453 @@
+/* ===========================================================================
+   MetehanTech Design System
+   ---------------------------------------------------------------------------
+   Single source of truth for colour, elevation, radius, motion and typography.
+   Every other stylesheet consumes these tokens instead of hard-coded values.
+
+   Colour discipline (deliberate, not decorative):
+     purple / indigo  → brand, navigation, selection, neutral emphasis
+     cyan             → live network / DNS data surfaces only
+     green            → healthy / success only
+     amber            → warning only
+     red              → critical / error / blocked only
+
+   Performance: no WebGL, no canvas loops, no permanently running animation. The page
+   background is two static radial gradients plus a 1px CSS grid. backdrop-filter
+   is restricted to the few sticky/floating surfaces (header, tab bar, status
+   banner, drawer) so a 12.4" tablet never has to blur a full grid of cards.
+   =========================================================================== */
+
+:root {
+  /* ---- base surfaces ---- */
+  --bg-void: #07060d;
+  --bg-base: #0b0812;
+  --bg-raise: #100c1a;
+  --bg-sunken: #0a0710;
+
+  /* ---- translucent surfaces (glass) ---- */
+  --surface-1: rgba(24, 18, 39, 0.72);
+  --surface-2: rgba(33, 25, 52, 0.66);
+  --surface-3: rgba(45, 34, 69, 0.58);
+  --surface-solid: #16101f;
+  --surface-input: #130e1c;
+  --surface-hover: rgba(124, 58, 237, 0.10);
+  --surface-active: rgba(124, 58, 237, 0.18);
+
+  /* ---- borders ---- */
+  --border-faint: rgba(167, 139, 250, 0.10);
+  --border: rgba(167, 139, 250, 0.16);
+  --border-strong: rgba(167, 139, 250, 0.30);
+  --border-focus: #c4b5fd;
+
+  /* ---- brand ---- */
+  --purple: #7c3aed;
+  --purple-hi: #a855f7;
+  --purple-soft: #c4b5fd;
+  --indigo: #6366f1;
+  --cyan: #22d3ee;
+
+  /* ---- semantic status ---- */
+  --ok: #34d399;
+  --ok-dim: rgba(52, 211, 153, 0.13);
+  --ok-edge: rgba(52, 211, 153, 0.34);
+  --warn: #fbbf24;
+  --warn-dim: rgba(251, 191, 36, 0.13);
+  --warn-edge: rgba(251, 191, 36, 0.34);
+  --crit: #f87171;
+  --crit-dim: rgba(248, 113, 113, 0.13);
+  --crit-edge: rgba(248, 113, 113, 0.36);
+  --info: #a78bfa;
+  --info-dim: rgba(167, 139, 250, 0.13);
+  --info-edge: rgba(167, 139, 250, 0.32);
+  --live: var(--cyan);
+  --live-dim: rgba(34, 211, 238, 0.12);
+  --live-edge: rgba(34, 211, 238, 0.32);
+
+  /* ---- text ---- */
+  --text-1: #eceaf6;
+  --text-2: #b9b2cc;
+  --text-3: #8a83a0;
+  --text-inverse: #ffffff;
+
+  /* ---- radius ---- */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* ---- elevation ---- */
+  --shadow-1: 0 1px 2px rgba(3, 2, 8, 0.4);
+  --shadow-2: 0 10px 30px rgba(3, 2, 8, 0.45);
+  --shadow-3: 0 18px 48px rgba(3, 2, 8, 0.55);
+  --inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --glow-purple: 0 0 24px rgba(124, 58, 237, 0.22);
+  --glow-purple-strong: 0 0 32px rgba(168, 85, 247, 0.30);
+  --glow-cyan: 0 0 22px rgba(34, 211, 238, 0.20);
+
+  /* ---- motion ---- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+
+  /* ---- type ---- */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --fs-eyebrow: 10px;
+  --fs-micro: 11px;
+  --fs-sm: 12px;
+  --fs-body: 13px;
+  --fs-md: 14px;
+  --fs-card-title: 17px;
+  --fs-section: 22px;
+  --fs-page: clamp(28px, 3.6vw, 40px);
+
+  /* ---- spacing ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 44px;
+
+  /* ---- controls ---- */
+  --tap: 44px;
+
+  font-family: var(--font-sans);
+  color: var(--text-1);
+  background: var(--bg-base);
+  font-synthesis: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+* { box-sizing: border-box; }
+
+/* ------------------------------------------------------------------ backdrop */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-base);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+}
+
+/* Static technological wash: two radial glows + a faint grid. Fixed and
+   pointer-events:none so it never participates in layout, scrolling or hit
+   testing, and never repaints while the page scrolls. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 46% at 50% -12%, rgba(124, 58, 237, 0.26), transparent 70%),
+    radial-gradient(ellipse 46% 52% at 104% 42%, rgba(99, 102, 241, 0.16), transparent 76%),
+    linear-gradient(180deg, var(--bg-raise) 0%, var(--bg-base) 48%, var(--bg-void) 100%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image:
+    linear-gradient(rgba(167, 139, 250, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 78%);
+}
+
+/* ---------------------------------------------------------------- typography */
+
+h1, h2, h3, h4, p { overflow-wrap: break-word; }
+
+h1 {
+  margin: 0;
+  font-size: var(--fs-page);
+  line-height: 1.08;
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  color: var(--text-1);
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--purple-soft);
+  font-size: var(--fs-eyebrow);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 14px 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+}
+
+/* Numeric readouts line up column-wise across every table and KPI. */
+.metric-value, .cc-card dd, .dns-table td, .backup-history-row,
+.admin-activity-row, .alert-summary-card strong, .kpi-value,
+.incident-detail strong, footer time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------- panel */
+
+.panel {
+  position: relative;
+  background: linear-gradient(158deg, var(--surface-2), var(--surface-1));
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2), var(--inset-hi);
+  transition: transform var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+
+/* Hover lift is opt-in per component (see .cc-card, .service-card …) so static
+   containers such as log panels do not move under the pointer. */
+.panel.is-interactive:hover,
+.cc-card:hover,
+.service-card:hover,
+.admin-resource:hover,
+.backup-node:hover,
+.device-card:hover,
+.alert-summary-card:hover,
+.admin-alert-card:hover,
+.incident-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-3), var(--glow-purple), var(--inset-hi);
+}
+
+/* ------------------------------------------------------------- status badges */
+
+/* One badge recipe, four semantic skins. Every status chip in the app
+   (.state, .admin-state, .cc-state, .check, .dns-badge) resolves to this. */
+.mt-badge,
+.state,
+.admin-state,
+.check,
+.dns-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: var(--fs-eyebrow);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+.mt-badge::before,
+.state .state-dot,
+.admin-state::before,
+.check .check-dot,
+.dns-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mt-badge.is-ok, .state.good, .check.good,
+.admin-state.running, .admin-state.success, .admin-state.healthy,
+.dns-badge.allowed {
+  color: var(--ok);
+  border-color: var(--ok-edge);
+  background: var(--ok-dim);
+}
+
+.mt-badge.is-warn, .check.unknown,
+.admin-state.queued, .admin-state.degraded,
+.dns-badge.cached {
+  color: var(--warn);
+  border-color: var(--warn-edge);
+  background: var(--warn-dim);
+}
+
+.mt-badge.is-crit, .state.bad, .check.bad,
+.admin-state.stopped, .admin-state.failed, .admin-state.exited,
+.admin-state.verification_failed,
+.dns-badge.blocked, .dns-badge.error {
+  color: var(--crit);
+  border-color: var(--crit-edge);
+  background: var(--crit-dim);
+}
+
+.mt-badge.is-info, .admin-state.unknown {
+  color: var(--text-3);
+  border-color: var(--border);
+  background: var(--surface-3);
+}
+
+.mt-badge.is-live, .dns-badge.live {
+  color: var(--live);
+  border-color: var(--live-edge);
+  background: var(--live-dim);
+}
+
+/* ------------------------------------------------------------------- buttons */
+
+.admin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-3);
+  color: var(--text-1);
+  font: 750 var(--fs-micro)/1.2 var(--font-sans);
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              transform var(--dur-fast) var(--ease);
+}
+
+.admin-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-active);
+  color: var(--text-inverse);
+  box-shadow: var(--glow-purple);
+  transform: translateY(-1px);
+}
+
+.admin-button:active:not(:disabled) { transform: translateY(0); }
+.admin-button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.admin-button.primary {
+  border-color: rgba(196, 181, 253, 0.5);
+  background: linear-gradient(145deg, var(--purple), #5b21b6);
+  color: var(--text-inverse);
+  box-shadow: var(--glow-purple), var(--inset-hi);
+}
+
+.admin-button.compact { min-height: 32px; padding: 7px 10px; font-size: 9px; }
+
+/* Pressed / selected chrome shared by .log-lines.active and .activity-limit.active */
+.log-lines.active, .activity-limit.active {
+  border-color: rgba(196, 181, 253, 0.5);
+  background: linear-gradient(145deg, var(--purple), #5b21b6);
+  color: var(--text-inverse);
+  box-shadow: var(--glow-purple);
+}
+
+/* ---------------------------------------------------------- segmented control */
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  box-shadow: var(--inset-hi);
+}
+
+.segmented button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font: 720 var(--fs-micro)/1.2 var(--font-sans);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+
+.segmented button:hover { background: var(--surface-hover); color: var(--text-1); }
+
+.segmented button[aria-pressed="true"] {
+  background: linear-gradient(145deg, var(--purple), var(--indigo));
+  color: var(--text-inverse);
+  box-shadow: var(--glow-purple), var(--inset-hi);
+}
+
+/* ------------------------------------------------------------------- tables */
+
+.mt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.mt-table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: var(--fs-eyebrow);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mt-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-faint);
+  color: var(--text-1);
+  vertical-align: middle;
+}
+
+.mt-table tbody tr { transition: background-color var(--dur-fast) var(--ease); }
+.mt-table tbody tr:hover { background: var(--surface-hover); }
+.mt-table td.numeric, .mt-table th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* -------------------------------------------------------------------- focus */
+
+:where(button, a, input, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* --------------------------------------------------------- reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .panel:hover, .cc-card:hover, .admin-button:hover:not(:disabled) { transform: none; }
+}

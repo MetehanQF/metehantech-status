@@ -1,0 +1,124 @@
+name: metehantech-cloud
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE}
+    container_name: metehantech-nextcloud-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: --data-checksums
+    secrets: [postgres_password]
+    volumes:
+      - /srv/metehantech-cloud/postgres:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud -d nextcloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    logging: &logging
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  redis:
+    image: ${REDIS_IMAGE}
+    container_name: metehantech-nextcloud-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    secrets: [redis_password, redis_acl]
+    volumes:
+      - /opt/metehantech-cloud/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - /srv/metehantech-cloud/redis:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  app:
+    image: ${NEXTCLOUD_IMAGE}
+    container_name: metehantech-nextcloud-app
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST: db
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD_FILE: /run/secrets/redis_password
+      NEXTCLOUD_ADMIN_USER_FILE: /run/secrets/nextcloud_admin_user
+      NEXTCLOUD_ADMIN_PASSWORD_FILE: /run/secrets/nextcloud_admin_password
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.metehantech.com
+      NEXTCLOUD_DATA_DIR: /var/www/html/data
+      OVERWRITEHOST: cloud.metehantech.com
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: https://cloud.metehantech.com
+      NEXTCLOUD_INIT_HTACCESS: "true"
+      PHP_MEMORY_LIMIT: 1024M
+      PHP_UPLOAD_LIMIT: 10G
+      APACHE_BODY_LIMIT: "0"
+    secrets: [postgres_password, redis_password, nextcloud_admin_user, nextcloud_admin_password]
+    volumes:
+      - /srv/metehantech-cloud/nextcloud/html:/var/www/html
+      - /srv/metehantech-cloud/nextcloud/data:/var/www/html/data
+      - /opt/metehantech-cloud/apache-vhost.conf:/etc/apache2/sites-enabled/000-default.conf:ro
+    ports:
+      - 127.0.0.1:5300:80
+    networks: [frontend, backend]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/status.php | grep -q '\"installed\":true'"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 90s
+    tmpfs:
+      - "/tmp:size=512m,mode=1777"
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  cron:
+    image: ${NEXTCLOUD_IMAGE}
+    container_name: metehantech-nextcloud-cron
+    restart: unless-stopped
+    entrypoint: /cron.sh
+    depends_on:
+      app: {condition: service_healthy}
+    volumes:
+      - /srv/metehantech-cloud/nextcloud/html:/var/www/html
+      - /srv/metehantech-cloud/nextcloud/data:/var/www/html/data
+    networks: [frontend, backend]
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(is_file('/var/www/html/cron.php') ? 0 : 1);"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      - "/tmp:size=256m,mode=1777"
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+networks:
+  frontend:
+    ipam:
+      config: [{subnet: 172.30.53.0/24}]
+  backend:
+    internal: true
+    ipam:
+      config: [{subnet: 172.30.54.0/24}]
+
+secrets:
+  postgres_password: {file: /etc/metehantech-cloud/secrets/postgres-password}
+  redis_password: {file: /etc/metehantech-cloud/secrets/redis-password}
+  redis_acl: {file: /etc/metehantech-cloud/secrets/redis.acl}
+  nextcloud_admin_user: {file: /etc/metehantech-cloud/secrets/nextcloud-admin-user}
+  nextcloud_admin_password: {file: /etc/metehantech-cloud/secrets/nextcloud-admin-password}

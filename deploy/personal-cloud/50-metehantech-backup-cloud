@@ -1,0 +1,2 @@
+Cmnd_Alias METEHANTECH_BACKUP_CLOUD = /usr/bin/systemctl start --no-block metehantech-backup-cloud.service
+metehanqf ALL=(root) NOPASSWD: METEHANTECH_BACKUP_CLOUD

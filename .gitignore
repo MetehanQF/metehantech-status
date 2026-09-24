@@ -1,0 +1,58 @@
+# .gitignore — metehantech_status (Control Center + Alert Center + yedekleme)
+#
+# Bu uygulamanin secret'lari ZATEN repo disinda:
+#   /etc/metehantech-status/admin.env   (root:root 0600, systemd EnvironmentFile)
+#   /etc/metehantech-cloud/secrets/*    (Docker secrets, compose _FILE ile okunur)
+# Asagisi bunlarin yanlislikla repoya kopyalanmasina ve canli veriye karsi koruma.
+
+# ─────────────────────────────────────────────
+# 1. KIMLIK BILGILERI
+# ─────────────────────────────────────────────
+*.env
+.env
+.env.*
+!admin.env.example
+!*.env.example
+secrets/
+*.key
+*.pem
+
+# ─────────────────────────────────────────────
+# 2. CANLI VERI  (data/ tamamen uretim durumu)
+#    metrics.db, alerts.db, camera_canary.db, admin_activity.db,
+#    backup-work/, backup-hardening/, *.lock
+# ─────────────────────────────────────────────
+data/
+*.db
+*.db-shm
+*.db-wal
+*.lock
+
+# ─────────────────────────────────────────────
+# 3. PYTHON ARTIKLARI
+# ─────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# ─────────────────────────────────────────────
+# 4. LOG / GECICI
+# ─────────────────────────────────────────────
+*.log
+*.out
+*.tmp
+*.bak
+*.orig
+node_modules/
+
+# ─────────────────────────────────────────────
+# 5. ISLETIM SISTEMI
+# ─────────────────────────────────────────────
+.DS_Store
+*.swp
+*~

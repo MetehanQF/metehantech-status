@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0712">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Control Center / MetehanTech</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css', v='ds-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='ds-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css', v='ds-1') }}">
+  <script src="{{ url_for('static', filename='admin.js', v='control-v2-1') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='control-center.css', v='ds-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dns-center.css', v='subnav-v2') }}">
+  <script src="{{ url_for('static', filename='control-center.js', v='v2-2') }}" defer></script>
+  <script src="{{ url_for('static', filename='control-history.js', v='v2-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='dns-center.js', v='subnav-v2') }}" defer></script>
+</head>
+{# Ag adresleri sunucu tarafinda /etc/metehantech-status/network.env dosyasindan
+   gelir; istemci JS'i bunlari kaynak kodda sabitlemek yerine buradan okur. #}
+<body data-lan-host="{{ lan_host }}" data-tailscale-host="{{ tailscale_host }}">
+  <div class="page-shell admin-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><span>MetehanTech <span class="brand-light">/ Control</span></span></div>
+      <div class="admin-nav">
+        <a class="admin-public-link" href="{{ url_for('index') }}">Public status</a>
+        <form method="post" action="{{ url_for('admin.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="admin-link-button" type="submit">Sign out</button>
+        </form>
+      </div>
+    </header>
+    <main>
+      <div class="page-heading">
+        <div><p class="eyebrow">INFRASTRUCTURE / OPERATIONS</p><h1>MetehanTech Control Center</h1><p class="subtitle">STATUS · ALERT · SYSTEM · ACTION · DETAIL</p></div>
+        <span class="heading-ornament" aria-hidden="true">MT<span> / </span>OPS</span>
+      </div>
+      <p id="admin-message" class="admin-alert" role="status" hidden></p>
+<nav class="cc-nav" aria-label="Control Center navigation"><button type="button" data-view="overview" aria-pressed="true">Overview</button><button type="button" data-view="systems" aria-pressed="false">Systems</button><button type="button" data-view="services" aria-pressed="false">Services</button><button type="button" data-view="camera" aria-pressed="false">Camera</button><button type="button" data-view="cloud" aria-pressed="false">Nextcloud</button><button type="button" data-view="storage" aria-pressed="false">Storage</button><button type="button" data-view="backups" aria-pressed="false">Backups</button><button type="button" data-view="network" aria-pressed="false">Network</button><button type="button" data-view="dns" aria-pressed="false">DNS</button><button type="button" data-view="alerts" aria-pressed="false">Alerts</button><button type="button" data-view="activity" aria-pressed="false">Activity</button></nav><p id="cc-global-status" class="admin-alert" role="status">UNKNOWN</p><section class="cc-view" id="view-overview"><div class="panel cc-hero"><p class="eyebrow">METEHANTECH / CONTROL CENTER V2</p><h2 id="cc-health" role="status">UNKNOWN</h2><p id="cc-age">Waiting for collector evidence…</p></div><section id="cc-overview-alerts" aria-label="Active alerts"></section><section id="cc-overview" class="cc-grid"></section><h2>Quick actions</h2><div class="admin-actions"><a class="admin-button" href="http://{{ lan_host }}:8123" target="_blank" rel="noopener noreferrer">Open Home Assistant (private)</a><a class="admin-button" href="https://cloud.metehantech.com" target="_blank" rel="noopener noreferrer">Open Nextcloud</a><a class="admin-button" href="http://{{ lan_host }}:8971" target="_blank" rel="noopener noreferrer">Open Frigate (private)</a><button class="admin-button" data-open-view="backups">Backup Center</button></div></section><section class="cc-view" id="view-systems" hidden><h2>Systems</h2><section id="cc-systems" class="cc-grid"></section><h2>Metric history</h2><p>Existing 60s collector · maximum 242 points · missing samples are not zero.</p><div id="history-devices" class="segmented"><button data-device="pi5" aria-pressed="true">Pi5</button><button data-device="pcold" aria-pressed="false">PcOld</button></div><div id="history-ranges" class="segmented"><button data-range="1h" aria-pressed="false">1h</button><button data-range="6h" aria-pressed="false">6h</button><button data-range="24h" aria-pressed="true">24h</button><button data-range="7d" aria-pressed="false">7d</button></div><div class="cc-grid"><article class="panel chart-card"><h3>Cpu</h3><canvas data-metric="cpu" aria-label="cpu history" role="img"></canvas><div class="chart-tooltip" hidden></div></article><article class="panel chart-card"><h3>Temperature</h3><canvas data-metric="temperature" aria-label="temperature history" role="img"></canvas><div class="chart-tooltip" hidden></div></article><article class="panel chart-card"><h3>Ram</h3><canvas data-metric="ram" aria-label="ram history" role="img"></canvas><div class="chart-tooltip" hidden></div></article><article class="panel chart-card"><h3>Disk</h3><canvas data-metric="disk" aria-label="disk history" role="img"></canvas><div class="chart-tooltip" hidden></div></article></div></section><section class="cc-view" id="view-services" hidden><h2>Service health</h2><section id="cc-services" class="cc-grid"></section>      <div class="section-heading"><div><p class="eyebrow">01 / SYSTEMD</p><h2>Services</h2></div><span class="section-note">WHITELIST ONLY</span></div>
+      <section id="admin-services" class="admin-resource-grid" aria-live="polite"><p class="panel admin-empty">Loading approved services…</p></section>
+      <div class="section-heading"><div><p class="eyebrow">02 / DOCKER</p><h2>Containers</h2></div><span class="section-note">CONFIGURED WHITELIST</span></div>
+      <section id="cc-docker" class="cc-grid"></section>
+      <section id="admin-containers" class="admin-resource-grid" aria-live="polite"><p class="panel admin-empty">Loading approved containers…</p></section>
+      <div class="section-heading"><div><p class="eyebrow">03 / LOGS</p><h2>Recent output</h2></div><span id="log-resource" class="section-note">SELECT A RESOURCE</span></div>
+      <section class="panel admin-log-panel">
+        <div class="admin-log-controls" role="group" aria-label="Log line count">
+          <button class="admin-button log-lines active" type="button" data-lines="100">Last 100</button>
+          <button class="admin-button log-lines" type="button" data-lines="500">Last 500</button>
+        </div>
+        <pre id="admin-log" tabindex="0">Choose “View logs” on an approved resource.</pre>
+      </section>
+</section><section class="cc-view" id="view-alerts" hidden>      <div class="section-heading"><div><p class="eyebrow">04 / ALERT CENTER</p><h2>Infrastructure alerts</h2></div><span class="section-note">PERSISTENT / DEDUPLICATED</span></div>
+      <section class="alert-summary-grid" aria-label="Alert summary">
+        <article class="panel alert-summary-card critical"><span>ACTIVE ALERTS / CRITICAL</span><strong id="alert-critical-count">—</strong></article>
+        <article class="panel alert-summary-card warning"><span>ACTIVE ALERTS / WARNING</span><strong id="alert-warning-count">—</strong></article>
+        <article class="panel alert-summary-card resolved"><span>RESOLVED TODAY</span><strong id="alert-resolved-count">—</strong></article>
+      </section>
+      <section class="alert-center-controls" aria-label="Alert filters">
+        <div class="segmented" id="alert-filters">
+          <button type="button" data-status="active" data-severity="" aria-pressed="true">Active</button>
+          <button type="button" data-status="active" data-severity="critical" aria-pressed="false">Critical</button>
+          <button type="button" data-status="active" data-severity="warning" aria-pressed="false">Warning</button>
+          <button type="button" data-status="active" data-severity="info" aria-pressed="false">Info</button>
+          <button type="button" data-status="resolved" data-severity="" aria-pressed="false">Resolved</button>
+          <button type="button" data-status="" data-severity="" aria-pressed="false">All</button>
+        </div>
+        <div class="segmented" id="alert-limits">
+          <button type="button" data-limit="50" aria-pressed="true">50</button>
+          <button type="button" data-limit="100" aria-pressed="false">100</button>
+          <button type="button" data-limit="500" aria-pressed="false">500</button>
+        </div>
+      </section>
+      <section id="admin-alerts" class="admin-alert-list" aria-live="polite"><p class="panel admin-empty">Loading infrastructure alerts…</p></section>
+</section><section class="cc-view" id="view-backups" hidden>      {% if backup_center_enabled %}
+      <div class="section-heading"><div><p class="eyebrow">05 / BACKUP CENTER</p><h2>Restore points</h2></div><span class="section-note">MANUAL / VERIFIED</span></div>
+      <section class="backup-notices" aria-label="Backup safety status">
+        <p><strong>Sensitive configuration backup:</strong> NOT ENABLED</p>
+        <p><strong>Portainer backup:</strong> EXCLUDED / SUPPORTED EXPORT PENDING</p>
+        <p><strong>Next scheduled runs:</strong> <span id="cc-next-backups">UNKNOWN</span></p>
+      </section>
+      <section id="cc-backup-flows" class="cc-grid"></section>
+      <section id="backup-nodes" class="backup-node-grid" aria-live="polite">
+        <article class="panel backup-node" data-node="pi">
+          <div class="backup-node-head"><div><span class="backup-node-label">SOURCE NODE</span><h3>Raspberry Pi 5</h3></div><span class="admin-state unknown" data-field="status">never</span></div>
+          <dl class="backup-details"><div><dt>Last backup</dt><dd data-field="last">—</dd></div><div><dt>Size</dt><dd data-field="size">—</dd></div><div><dt>Destination</dt><dd>MetehanTechPcOld</dd></div><div><dt>Verification</dt><dd data-field="verification">—</dd></div><div><dt>Phase</dt><dd data-field="phase">Idle</dd></div></dl>
+          <div class="admin-actions"><button class="admin-button backup-start" type="button" data-node="pi">Backup Pi Now</button></div>
+        </article>
+        <article class="panel backup-node" data-node="pcold">
+          <div class="backup-node-head"><div><span class="backup-node-label">SOURCE NODE</span><h3>MetehanTechPcOld</h3></div><span class="admin-state unknown" data-field="status">never</span></div>
+          <dl class="backup-details"><div><dt>Last backup</dt><dd data-field="last">—</dd></div><div><dt>Size</dt><dd data-field="size">—</dd></div><div><dt>Destination</dt><dd>Raspberry Pi 5</dd></div><div><dt>Verification</dt><dd data-field="verification">—</dd></div><div><dt>Phase</dt><dd data-field="phase">Idle</dd></div></dl>
+          <div class="admin-actions"><button class="admin-button backup-start" type="button" data-node="pcold">Backup PcOld Now</button></div>
+        </article>
+        <article class="panel backup-node" data-node="cloud">
+          <div class="backup-node-head"><div><span class="backup-node-label">SOURCE SERVICE</span><h3>Personal Cloud</h3></div><span class="admin-state unknown" data-field="status">never</span></div>
+          <dl class="backup-details"><div><dt>Last backup</dt><dd data-field="last">—</dd></div><div><dt>Size</dt><dd data-field="size">—</dd></div><div><dt>Destination</dt><dd>MetehanTechPcOld</dd></div><div><dt>Verification</dt><dd data-field="verification">—</dd></div><div><dt>Phase</dt><dd data-field="phase">Idle</dd></div></dl>
+          <div class="admin-actions"><button class="admin-button backup-start" type="button" data-node="cloud">Backup Cloud Now</button></div>
+        </article>
+      </section>
+      <section class="panel backup-history-panel">
+        <div class="backup-history-head"><div><span class="backup-node-label">RESTORE POINTS</span><h3>Backup history</h3></div><button id="backup-refresh" class="admin-button" type="button">View History</button></div>
+        <div id="backup-history" class="backup-history" aria-live="polite"><p class="admin-activity-empty">Loading backup history…</p></div>
+      </section>
+      {% endif %}
+</section><section class="cc-view" id="view-cloud" hidden>      <div class="section-heading"><div><p class="eyebrow">06 / CLOUD</p><h2>Personal Cloud</h2></div><span class="section-note">LOCAL ORIGIN / CLOUDFLARE</span></div>
+      <section id="cloud-summary" class="cloud-summary-grid" aria-live="polite">
+        <article class="panel cloud-overview">
+          <div class="backup-node-head"><div><span class="backup-node-label">CLOUD STATUS</span><h3>cloud.metehantech.com</h3></div><span id="cloud-state" class="admin-state unknown">unknown</span></div>
+          <dl class="backup-details"><div><dt>Storage used</dt><dd id="cloud-storage-used">—</dd></div><div><dt>Storage free</dt><dd id="cloud-storage-free">—</dd></div><div><dt>Last backup</dt><dd id="cloud-last-backup">—</dd></div><div><dt>Verification</dt><dd id="cloud-backup-verification">—</dd></div></dl>
+          <div class="admin-actions"><a class="admin-button" href="https://cloud.metehantech.com" target="_blank" rel="noopener noreferrer">Open Cloud</a></div>
+        </article>
+        <article class="panel cloud-services"><span class="backup-node-label">COMPONENT HEALTH</span><div id="cloud-components"><p class="admin-empty">Loading cloud health…</p></div></article>
+      </section>
+<section id="cc-cloud-detail" class="panel cc-card"></section></section><section class="cc-view" id="view-camera" hidden>      <div class="section-heading"><div><p class="eyebrow">07 / CAMERA CENTER</p><h2>Tapo C211</h2></div><span class="section-note">PRIVATE / LAN + TAILSCALE</span></div>
+      <section id="camera-center" class="panel camera-center" aria-live="polite">
+        <div class="camera-center-head"><div><span class="backup-node-label">CAMERA STATUS</span><h3>Tapo C211</h3></div><span id="camera-state" class="admin-state unknown">checking</span></div>
+        <dl class="camera-metrics">
+          <div><dt>Frigate</dt><dd id="camera-frigate">—</dd></div>
+          <div><dt>go2rtc</dt><dd id="camera-go2rtc">—</dd></div>
+          <div><dt>Recording</dt><dd id="camera-recording">—</dd></div>
+          <div><dt>NFS Storage</dt><dd id="camera-nfs">—</dd></div>
+          <div><dt>Storage Used</dt><dd id="camera-storage-used">—</dd></div>
+          <div><dt>Storage Free</dt><dd id="camera-storage-free">—</dd></div>
+          <div><dt>Daily Growth</dt><dd id="camera-daily-growth">Measuring</dd></div>
+          <div><dt>Last Motion</dt><dd id="camera-last-motion">Measuring</dd></div>
+          <div><dt>Events Today</dt><dd id="camera-events-today">0</dd></div>
+        </dl>
+        <div class="admin-actions camera-actions">
+          <a class="admin-button" data-camera-path="/" target="_blank" rel="noopener noreferrer">Live View</a>
+          <a class="admin-button" data-camera-path="/review" target="_blank" rel="noopener noreferrer">Events</a>
+          <a class="admin-button" data-camera-path="/recording" target="_blank" rel="noopener noreferrer">Recordings</a>
+        </div>
+      </section>
+<div class="admin-actions"><button class="admin-button" id="cc-preview-button" type="button">Load snapshot</button></div><img id="cc-preview" alt="Tapo C211 snapshot" hidden width="640"><p id="cc-preview-message" role="status"></p><div id="cc-person-events"></div><section id="cc-camera-detail" class="panel cc-card"></section></section><section class="cc-view" id="view-activity" hidden>      <div class="section-heading"><div><p class="eyebrow">08 / ADMIN ACTIVITY</p><h2>Audit trail</h2></div><span class="section-note">PERSISTENT / SQLITE</span></div>
+      <section class="panel admin-activity-panel">
+        <div class="admin-log-controls" role="group" aria-label="Activity record count">
+          <button class="admin-button activity-limit active" type="button" data-limit="50">Last 50</button>
+          <button class="admin-button activity-limit" type="button" data-limit="100">Last 100</button>
+          <button class="admin-button activity-limit" type="button" data-limit="500">Last 500</button>
+        </div>
+        <div id="admin-activity" class="admin-activity" aria-live="polite"><p class="admin-activity-empty">Loading admin activity…</p></div>
+      </section>
+<h2>System timeline</h2><section id="cc-timeline" class="panel cc-card"></section></section><section class="cc-view" id="view-storage" hidden><h2>Storage</h2><section id="cc-storage" class="cc-grid"></section></section><section class="cc-view" id="view-network" hidden><h2>Network</h2><section id="cc-network" class="cc-grid"></section></section>
+<section class="cc-view" id="view-dns" hidden>
+      <div class="section-heading"><div><p class="eyebrow">09 / DNS CENTER</p><h2>AdGuard Home</h2></div><span class="section-note">ADMIN ONLY / LAN + TAILSCALE</span></div>
+      <p id="dns-status" class="admin-alert" role="status">Loading DNS Center…</p>
+
+      <nav class="dns-subnav" id="dns-subnav" aria-label="DNS Center sections">
+        <button type="button" data-dns="overview" aria-pressed="true">Overview</button>
+        <button type="button" data-dns="traffic" aria-pressed="false">Traffic</button>
+        <button type="button" data-dns="clients" aria-pressed="false">Clients</button>
+        <button type="button" data-dns="domains" aria-pressed="false">Domains</button>
+        <button type="button" data-dns="resolvers" aria-pressed="false">Resolvers</button>
+        <button type="button" data-dns="querylog" aria-pressed="false">Query Log</button>
+      </nav>
+
+      <!-- ===================================================== OVERVIEW -->
+      <section class="dns-section" id="dns-section-overview" aria-label="DNS overview">
+        <div class="dns-health-strip" id="dns-health-strip" role="status" aria-label="DNS health strip"></div>
+
+        <section id="dns-anomalies" class="dns-anomalies" aria-label="Observed DNS anomalies"></section>
+
+        <section id="dns-kpis" class="dns-kpi-grid" aria-label="DNS key metrics"></section>
+        <p class="dns-note">Every figure above is read from AdGuard's own counters. Values AdGuard does not publish are shown as <strong>Not available</strong> rather than estimated, and anything derived from a bounded query-log sample says so on the tile.</p>
+
+        <h3 class="dns-heading">Resolution topology</h3>
+        <p class="dns-note">The path as it is actually configured: router DHCP hands out both resolvers, so LAN clients reach Pi5 and PcOld directly, each resolver filters and caches locally, and cache misses leave over the configured upstreams. Node colour is the real probe result — green healthy, amber degraded, red critical, grey not probed. The router is drawn because it is genuinely on the path, but this dashboard never health-checks it, so it stays grey rather than claiming to be healthy. Select a node for its detail.</p>
+        <article class="panel"><div class="dns-topo" id="dns-topology" role="group" aria-label="DNS resolution topology"></div></article>
+
+        <h3 class="dns-heading">DNS events</h3>
+        <p class="dns-note">Transitions this system already recorded: resolver and upstream alerts raised and resolved by the existing Alert Center rules, plus AdGuard's own filter-list update timestamps. Nothing is reconstructed — before a transition happens there is simply no event to show.</p>
+        <section id="dns-events" class="panel cc-card dns-timeline" aria-label="DNS event timeline"></section>
+      </section>
+
+      <!-- ====================================================== TRAFFIC -->
+      <section class="dns-section" id="dns-section-traffic" hidden aria-label="DNS traffic">
+        <p class="dns-note">Plotted straight from AdGuard's own per-bucket counters — <strong id="dns-traffic-window">168 hourly buckets</strong>, oldest to newest. AdGuard's granularity is one hour, so <strong>1H</strong> is a single (still filling) bucket rather than a line. AdGuard publishes no cached-query series, so cached traffic is deliberately not plotted rather than estimated.</p>
+        <div class="dns-controls">
+          <div class="segmented" id="dns-traffic-ranges" role="group" aria-label="Traffic range">
+            <button type="button" data-range="1" aria-pressed="false">1H</button>
+            <button type="button" data-range="6" aria-pressed="false">6H</button>
+            <button type="button" data-range="24" aria-pressed="true">24H</button>
+            <button type="button" data-range="168" aria-pressed="false">7D</button>
+          </div>
+        </div>
+        <article class="panel dns-chart-card">
+          <div class="dns-chart-head"><h3>Queries per hour</h3><span id="dns-traffic-total" class="cc-state">UNKNOWN</span></div>
+          <div class="dns-chart-legend"><span class="dns-legend-total"><i aria-hidden="true"></i>Total queries</span><span class="dns-legend-blocked"><i aria-hidden="true"></i>Blocked</span></div>
+          <div class="dns-chart-wrap"><canvas id="dns-traffic-canvas" role="img" aria-label="DNS queries and blocked queries per hour"></canvas><div class="dns-chart-tip" id="dns-traffic-tip" hidden></div></div>
+          <p class="dns-chart-empty" id="dns-traffic-empty" hidden>Not available — AdGuard has not published a traffic history yet.</p>
+        </article>
+        <section id="dns-traffic-stats" class="dns-kpi-grid" aria-label="Traffic statistics for the selected range"></section>
+      </section>
+
+      <!-- ====================================================== CLIENTS -->
+      <section class="dns-section" id="dns-section-clients" hidden aria-label="DNS clients">
+        <p class="dns-note">Names come from the reviewed MetehanTech inventory, from AdGuard's own rDNS / ARP / DHCP observations, or from provable host facts (Docker bridge, default gateway, this host's own addresses). Unmatched addresses stay <strong>Unknown client</strong> — nothing is guessed. Category is only set when real evidence supports it; everything else is honestly <strong>Unknown</strong>. Select a row for that client's detail.</p>
+        <div class="dns-client-filter">
+          <label for="dns-client-search">Search client / IP</label>
+          <input id="dns-client-search" type="search" inputmode="text" maxlength="64" placeholder="Name or IP address" autocomplete="off">
+        </div>
+        <div class="dns-controls">
+          <div class="segmented" id="dns-category-filter" role="group" aria-label="Client category">
+            <button type="button" data-category="all" aria-pressed="true">All</button>
+            <button type="button" data-category="infrastructure" aria-pressed="false">Infrastructure</button>
+            <button type="button" data-category="user_device" aria-pressed="false">User devices</button>
+            <button type="button" data-category="iot" aria-pressed="false">IoT</button>
+            <button type="button" data-category="unknown" aria-pressed="false">Unknown</button>
+          </div>
+          <div class="segmented" id="dns-scope-filter" role="group" aria-label="Traffic scope">
+            <button type="button" data-scope="all" aria-pressed="true">All traffic</button>
+            <button type="button" data-scope="client" aria-pressed="false">Client traffic</button>
+            <button type="button" data-scope="infrastructure" aria-pressed="false">Infrastructure traffic</button>
+          </div>
+        </div>
+        <p class="dns-note" id="dns-scope-summary">—</p>
+        <section class="panel cc-card"><div class="dns-table-wrap"><table class="dns-table" id="dns-clients"><thead><tr><th scope="col">Client</th><th scope="col">Address</th><th scope="col" class="numeric">Queries</th><th scope="col" class="numeric">Blocked</th><th scope="col" class="numeric">Blocked %</th><th scope="col">Category</th><th scope="col">Name source</th></tr></thead><tbody></tbody></table></div></section>
+
+        <h3 class="dns-heading">Most filtered clients</h3>
+        <p class="dns-note">The same real client list ranked by how much of its traffic AdGuard actually filtered, measured over the most recent <span id="dns-blocked-sample">—</span> blocked queries in the retained log.</p>
+        <section class="panel cc-card"><div class="dns-table-wrap"><table class="dns-table" id="dns-top-blocked-clients"><thead><tr><th scope="col">Client</th><th scope="col">Address</th><th scope="col" class="numeric">Blocked</th><th scope="col" class="numeric">Queries</th><th scope="col" class="numeric">Blocked %</th></tr></thead><tbody></tbody></table></div></section>
+      </section>
+
+      <!-- ====================================================== DOMAINS -->
+      <section class="dns-section" id="dns-section-domains" hidden aria-label="DNS domains">
+        <p class="dns-note">Ranked by AdGuard's own counters and bounded server-side. Selecting a domain aggregates it out of the retained query log only; this view reports observed traffic and never judges whether a domain is safe or malicious, because nothing in this system measures that.</p>
+        <div class="cc-grid">
+          <article class="panel cc-card"><h3>Top queried domains</h3><div class="dns-table-wrap"><table class="dns-table" id="dns-queried"><thead><tr><th scope="col">Domain</th><th scope="col" class="numeric">Queries</th></tr></thead><tbody></tbody></table></div></article>
+          <article class="panel cc-card"><h3>Top blocked domains</h3><div class="dns-table-wrap"><table class="dns-table" id="dns-blocked"><thead><tr><th scope="col">Domain</th><th scope="col" class="numeric">Blocked</th></tr></thead><tbody></tbody></table></div></article>
+        </div>
+      </section>
+
+      <!-- ==================================================== RESOLVERS -->
+      <section class="dns-section" id="dns-section-resolvers" hidden aria-label="DNS resolvers">
+        <p class="dns-note">Two independent resolvers answer the LAN directly. Health is a real DNS query, not a port check: each member must both <strong>resolve</strong> and still <strong>filter</strong>. 2/2 = HEALTHY · 1/2 = DEGRADED (service continues, redundancy lost) · 0/2 = CRITICAL.</p>
+        <section id="dns-cluster" class="cc-grid"></section>
+
+        <h3 class="dns-heading">Primary resolver detail</h3>
+        <section id="dns-overview" class="cc-grid"></section>
+
+        <h3 class="dns-heading">Upstream comparison</h3>
+        <p class="dns-note">Read from the running AdGuard configuration — no upstream name is hardcoded here. A fallback is drawn differently from a normal upstream because it only answers when every primary has failed.</p>
+        <section id="dns-upstreams" class="cc-grid"></section>
+
+        <h3 class="dns-heading">Filter lists</h3>
+        <p class="dns-note">A list that is switched off reads <strong>DISABLED</strong> in neutral grey, not red: that is a configuration choice, not a failure. Red <strong>ERROR</strong> is reserved for a list that is enabled but carries no rules.</p>
+        <section id="dns-filters-cards" class="cc-grid"></section>
+
+        <div class="admin-actions"><a class="admin-button" id="dns-admin-lan" href="http://{{ lan_host }}:3000" target="_blank" rel="noopener noreferrer">Open AdGuard (LAN)</a><a class="admin-button" id="dns-admin-ts" href="http://{{ tailscale_host }}:3000" target="_blank" rel="noopener noreferrer">Open AdGuard (Tailscale)</a></div>
+      </section>
+
+      <!-- ==================================================== QUERY LOG -->
+      <section class="dns-section" id="dns-section-querylog" hidden aria-label="DNS query log">
+        <p class="dns-note">Server-side filtered and paginated. Raw query history is never bulk-loaded into the browser, the query log is retained for a bounded period only, and polling stops the moment this section is not the one on screen. Select a row for its full detail.</p>
+        <div class="dns-controls">
+          <div class="segmented" id="dns-filters" role="group" aria-label="Response filter">
+            <button type="button" data-filter="ALL" aria-pressed="true">All</button>
+            <button type="button" data-filter="BLOCKED" aria-pressed="false">Blocked</button>
+            <button type="button" data-filter="ALLOWED" aria-pressed="false">Allowed</button>
+          </div>
+          <div class="segmented" id="dns-limits" role="group" aria-label="Page size">
+            <button type="button" data-limit="25" aria-pressed="false">25</button>
+            <button type="button" data-limit="50" aria-pressed="true">50</button>
+            <button type="button" data-limit="100" aria-pressed="false">100</button>
+          </div>
+          <button class="admin-button dns-live-toggle" type="button" id="dns-live" aria-pressed="false">LIVE</button>
+        </div>
+        <div class="dns-client-filter">
+          <label for="dns-client-input">Client</label>
+          <input id="dns-client-input" type="search" inputmode="text" maxlength="64" placeholder="IP address or client name" autocomplete="off">
+          <label for="dns-domain-input">Domain</label>
+          <input id="dns-domain-input" type="search" inputmode="text" maxlength="253" placeholder="example.com" autocomplete="off">
+          <label for="dns-type-input">Type</label>
+          <select id="dns-type-input"><option value="">Any</option><option>A</option><option>AAAA</option><option>CNAME</option><option>HTTPS</option><option>MX</option><option>NS</option><option>PTR</option><option>SRV</option><option>SVCB</option><option>TXT</option></select>
+          <button class="admin-button" type="button" id="dns-client-apply">Apply</button>
+          <button class="admin-button" type="button" id="dns-client-clear">Clear</button>
+        </div>
+        <section class="panel cc-card"><div class="dns-table-wrap"><table class="dns-table" id="dns-recent"><thead><tr><th scope="col">Time</th><th scope="col">Client</th><th scope="col">Domain</th><th scope="col">Type</th><th scope="col">Result</th><th scope="col" class="numeric">ms</th></tr></thead><tbody></tbody></table></div><div class="admin-actions"><button class="admin-button" type="button" id="dns-more">Load older</button></div><p id="dns-recent-message" role="status"></p></section>
+      </section>
+</section>    </main>
+    <footer><span>MetehanTech <span class="footer-separator">/</span> Control Center</span><span>Authenticated session</span></footer>
+  </div>
+</body>
+</html>

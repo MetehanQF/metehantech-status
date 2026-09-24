@@ -1,0 +1,19 @@
+# TEMPLATE — kurulum betigi __PROJECT_ROOT__ ve __RUN_USER__ yer tutucularini
+# gercek degerlerle degistirir. Bu dosya makineye ozel yol ICERMEZ.
+[Unit]
+Description=MetehanTech System Status dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=__RUN_USER__
+WorkingDirectory=__PROJECT_ROOT__
+EnvironmentFile=-/etc/metehantech-status/admin.env
+Environment=ALERT_TELEGRAM_ENABLED=0
+ExecStart=__PROJECT_ROOT__/.venv/bin/gunicorn --workers 1 --threads 4 --bind 127.0.0.1:5200 --timeout 30 --graceful-timeout 20 --access-logfile - --error-logfile - --access-logformat "%%(t)s %%(p)s %%({cf-connecting-ip}i)s \"%%(r)s\" %%(s)s %%(L)s" wsgi:app
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

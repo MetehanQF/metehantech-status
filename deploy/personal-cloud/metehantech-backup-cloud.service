@@ -1,0 +1,25 @@
+# TEMPLATE — kurulum betigi __PROJECT_ROOT__ ve __RUN_USER__ yer tutucularini
+# gercek degerlerle degistirir. Bu dosya makineye ozel yol ICERMEZ.
+[Unit]
+Description=MetehanTech Backup Center - Personal Cloud export to PcOld
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=__RUN_USER__
+Group=__RUN_USER__
+SupplementaryGroups=docker
+WorkingDirectory=__PROJECT_ROOT__
+EnvironmentFile=-/etc/metehantech-status/admin.env
+ExecStart=__PROJECT_ROOT__/.venv/bin/python __PROJECT_ROOT__/backup_job.py cloud
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=__PROJECT_ROOT__/data
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+

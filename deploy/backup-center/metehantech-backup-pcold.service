@@ -1,0 +1,18 @@
+# TEMPLATE — kurulum betigi __PROJECT_ROOT__ ve __RUN_USER__ yer tutucularini
+# gercek degerlerle degistirir. Bu dosya makineye ozel yol ICERMEZ.
+[Unit]
+Description=MetehanTech Backup Center - PcOld export to Raspberry Pi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__RUN_USER__
+WorkingDirectory=__PROJECT_ROOT__
+ExecStart=__PROJECT_ROOT__/.venv/bin/python __PROJECT_ROOT__/backup_job.py pcold
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=__PROJECT_ROOT__/data /srv/metehantech-backups/from-pcold

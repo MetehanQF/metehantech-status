@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0712">
+  <title>MetehanTech Control Center</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='design-system.css', v='ds-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='ds-1') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='history.js', v='history-ui-3') }}" defer></script>
+  <script src="{{ url_for('static', filename='events.js', v='events-ui-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='incidents.js', v='incidents-ui-1') }}" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><span>MetehanTech <span class="brand-light">/ Status</span></span></div>
+      <a class="live-label" href="/admin">OPEN CONTROL CENTER</a><span class="live-label"><span class="live-dot" aria-hidden="true"></span> LIVE MONITORING</span>
+    </header>
+
+    <main>
+      <div class="page-heading">
+        <div><p class="eyebrow">INFRASTRUCTURE / OVERVIEW</p><h1>MetehanTech Control Center</h1><p class="subtitle">Infrastructure health · monitoring · secure management.</p></div>
+        <span class="heading-ornament" aria-hidden="true">MT<span> / </span>SYS</span>
+      </div>
+
+      <section class="overview panel" aria-label="Overall system status" aria-live="polite">
+        <div class="overview-icon" id="overview-icon" aria-hidden="true">·</div>
+        <div class="overview-copy"><p class="eyebrow">SYSTEM HEALTH</p><h2 id="overall-status">Loading status…</h2><p class="overview-description" id="overview-description">Checking monitored systems</p></div>
+        <span class="overview-pill" id="overview-pill">Checking</span>
+      </section>
+
+      <div class="section-heading"><div><p class="eyebrow">01 / HARDWARE</p><h2>Devices</h2></div><span class="section-note">2 MONITORED NODES</span></div>
+      <section class="device-grid" id="devices" aria-label="Devices"></section>
+
+      <div class="section-heading services-heading"><div><p class="eyebrow">02 / CONNECTIVITY & APPLICATIONS</p><h2>Services</h2></div><span class="section-note">MONITORED SERVICES</span></div>
+      <section class="services-grid" id="services" aria-label="Services"></section>
+
+      <div class="section-heading history-heading"><div><p class="eyebrow">03 / HISTORY</p><h2>System History</h2></div><span class="section-note">7-DAY RETENTION</span></div>
+      <section class="history-section" aria-label="System history">
+        <div class="history-controls">
+          <div class="segmented" id="history-devices" aria-label="History device">
+            <button type="button" data-device="pi5" aria-pressed="true">Raspberry Pi 5</button>
+            <button type="button" data-device="pcold" aria-pressed="false">MetehanTechPcOld</button>
+          </div>
+          <div class="segmented" id="history-ranges" aria-label="History range">
+            <button type="button" data-range="1h" aria-pressed="false">1H</button>
+            <button type="button" data-range="6h" aria-pressed="false">6H</button>
+            <button type="button" data-range="24h" aria-pressed="true">24H</button>
+            <button type="button" data-range="7d" aria-pressed="false">7D</button>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <article class="panel chart-card"><div class="chart-head"><span>Temperature</span><strong>°C</strong></div><canvas data-metric="temperature" aria-label="Temperature history chart"></canvas><div class="chart-tooltip" hidden></div></article>
+          <article class="panel chart-card"><div class="chart-head"><span>RAM Usage</span><strong>%</strong></div><canvas data-metric="ram" aria-label="RAM history chart"></canvas><div class="chart-tooltip" hidden></div></article>
+          <article class="panel chart-card"><div class="chart-head"><span>Disk Usage</span><strong>%</strong></div><canvas data-metric="disk" aria-label="Disk history chart"></canvas><div class="chart-tooltip" hidden></div></article>
+          <article class="panel chart-card"><div class="chart-head"><span>Load Average</span><strong>1m</strong></div><canvas data-metric="load" aria-label="Load average history chart"></canvas><div class="chart-tooltip" hidden></div></article>
+        </div>
+      </section>
+
+      <div class="section-heading events-heading"><div><p class="eyebrow">04 / EVENTS</p><h2>Recent Events</h2></div><span class="section-note">TRANSITION-BASED ALERTS</span></div>
+      <section class="events-section" aria-label="Recent events">
+        <div class="events-summary panel" id="events-summary" aria-live="polite"><span class="events-summary-icon" aria-hidden="true">✓</span><span id="active-incidents">Checking active incidents…</span></div>
+        <div class="events-controls">
+          <div class="segmented" id="event-severities" aria-label="Event severity">
+            <button type="button" data-severity="" aria-pressed="true">All</button>
+            <button type="button" data-severity="critical" aria-pressed="false">Critical</button>
+            <button type="button" data-severity="warning" aria-pressed="false">Warning</button>
+            <button type="button" data-severity="recovery" aria-pressed="false">Recovery</button>
+          </div>
+          <label class="event-source-label" for="event-source"><span>Source</span><select id="event-source">
+            <option value="">All Sources</option>
+            <option value="pi5">Raspberry Pi 5</option>
+            <option value="pcold">MetehanTechPcOld</option>
+            <option value="services">Services</option>
+          </select></label>
+        </div>
+        <div class="events-list" id="events-list" aria-live="polite"><p class="events-empty panel">Loading recent events…</p></div>
+        <div class="incident-section-head"><div><p class="eyebrow">OUTAGE SUMMARY</p><h3>Incident History</h3></div>
+          <div class="segmented incident-filters" id="incident-statuses" aria-label="Incident status">
+            <button type="button" data-status="" aria-pressed="true">All</button>
+            <button type="button" data-status="active" aria-pressed="false">Active</button>
+            <button type="button" data-status="resolved" aria-pressed="false">Resolved</button>
+          </div>
+        </div>
+        <div class="incidents-list" id="incidents-list" aria-live="polite"><p class="events-empty panel">Loading incidents…</p></div>
+      </section>
+    </main>
+
+    <footer><span>MetehanTech <span class="footer-separator">/</span> System Status</span><span>Last updated: <time id="updated-at">—</time></span></footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,612 @@
+/* ===========================================================================
+   DNS Center — KPI strip, traffic graph, client intelligence, query log,
+   detail drawer and CSS topology. Cyan is used here (and only here, with the
+   Network view) to mark live resolver data.
+   =========================================================================== */
+
+.dns-note { color: var(--text-3); margin: 6px 0 var(--sp-4); max-width: 74ch; font-size: var(--fs-sm); line-height: 1.6; }
+.dns-note strong { color: var(--text-2); }
+
+.dns-heading { margin: var(--sp-7) 0 var(--sp-2); font-size: var(--fs-section); font-weight: 700; letter-spacing: -0.02em; }
+
+/* ------------------------------------------------------- sub-navigation */
+/* Second level inside the DNS view. It sticks below the main tab bar rather
+   than over it: the main bar is sticky at top:0 and is --tap + padding tall,
+   so this one starts where that one ends instead of overlapping it. */
+
+.dns-subnav {
+  position: sticky;
+  top: 68px;
+  z-index: 15;
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  padding: var(--sp-2) 0 var(--sp-3);
+  margin-bottom: var(--sp-4);
+  background: linear-gradient(180deg, rgba(11, 8, 18, 0.97) 72%, rgba(11, 8, 18, 0.78));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.dns-subnav button {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 9px 16px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
+  color: var(--text-3);
+  font: 720 var(--fs-sm)/1.2 var(--font-sans);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
+}
+
+.dns-subnav button:hover { border-color: var(--border-strong); background: var(--surface-hover); color: var(--text-1); }
+.dns-subnav button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+
+.dns-subnav button[aria-pressed="true"] {
+  border-color: rgba(196, 181, 253, 0.42);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.85), rgba(99, 102, 241, 0.75));
+  color: var(--text-inverse);
+  box-shadow: var(--glow-purple), var(--inset-hi);
+}
+
+/* ------------------------------------------------------- DNS health strip */
+
+.dns-health-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--border-faint);
+  box-shadow: var(--shadow-1), var(--inset-hi);
+}
+
+.dns-strip-lead, .dns-strip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 128px;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: linear-gradient(158deg, var(--surface-2), var(--surface-1));
+}
+
+.dns-strip-lead { flex: 1 1 190px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.20), var(--surface-1)); }
+
+.dns-strip-label { color: var(--text-3); font-size: 9px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
+.dns-strip-value { color: var(--text-1); font-size: var(--fs-md); font-weight: 720; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+
+.dns-strip-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.dns-strip-state::before { content: ""; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: currentColor; }
+
+.dns-strip-lead.state-ok .dns-strip-state { color: var(--ok); }
+.dns-strip-lead.state-warn .dns-strip-state { color: var(--warn); }
+.dns-strip-lead.state-crit .dns-strip-state { color: var(--crit); }
+.dns-strip-item.state-ok .dns-strip-value { color: var(--ok); }
+.dns-strip-item.state-warn .dns-strip-value { color: var(--warn); }
+.dns-strip-item.state-crit .dns-strip-value { color: var(--crit); }
+.dns-strip-item.state-live .dns-strip-value { color: var(--cyan); }
+
+/* ---------------------------------------------------------- anomaly cards */
+
+.dns-anomalies:empty { display: none; }
+.dns-anomalies { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-5); }
+
+.dns-anomaly {
+  padding: var(--sp-4) var(--sp-5);
+  border-color: var(--warn-edge);
+  background: linear-gradient(140deg, rgba(251, 191, 36, 0.09), var(--surface-1));
+}
+
+.dns-anomaly h3 { margin: var(--sp-2) 0 var(--sp-3); font-size: var(--fs-card-title); font-weight: 720; letter-spacing: -0.02em; }
+.dns-anomaly-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+
+.dns-anomaly-tag {
+  padding: 3px 9px;
+  border: 1px solid var(--warn-edge);
+  border-radius: var(--r-pill);
+  background: var(--warn-dim);
+  color: var(--warn);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.dns-anomaly-kind { color: var(--text-2); font-size: var(--fs-sm); font-weight: 700; }
+.dns-anomaly-facts { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+
+.dns-anomaly-facts span {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.dns-anomaly-facts .dns-anomaly-domain { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--warn); }
+
+/* --------------------------------------------------------- event timeline */
+
+.dns-timeline { display: grid; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5); }
+
+.dns-event {
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--surface-3);
+}
+
+.dns-event-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-3); }
+.dns-event-head strong { color: var(--text-1); font-size: var(--fs-body); font-weight: 720; }
+.dns-event-time { color: var(--text-3); font-size: var(--fs-micro); font-variant-numeric: tabular-nums; }
+.dns-event p { margin: 5px 0 0; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.55; }
+.dns-event-meta { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: 6px; }
+.dns-event-meta span { color: var(--text-3); font-size: var(--fs-micro); letter-spacing: 0.03em; }
+
+.dns-event.severity-critical { border-left-color: var(--crit); background: linear-gradient(90deg, var(--crit-dim), var(--surface-3) 40%); }
+.dns-event.severity-warning { border-left-color: var(--warn); background: linear-gradient(90deg, var(--warn-dim), var(--surface-3) 40%); }
+.dns-event.severity-resolved { border-left-color: var(--ok); background: linear-gradient(90deg, var(--ok-dim), var(--surface-3) 40%); }
+.dns-event.severity-info { border-left-color: var(--info); }
+
+/* ------------------------------------------------------------- live feed */
+
+.dns-live-toggle.is-on {
+  border-color: var(--live-edge);
+  background: var(--live-dim);
+  color: var(--cyan);
+}
+
+.dns-live-toggle.is-on::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--cyan);
+  animation: dns-pulse 1.8s var(--ease) infinite;
+}
+
+@keyframes dns-pulse { 50% { opacity: 0.25; } }
+
+.dns-live-feed { display: grid; gap: 2px; padding: var(--sp-4) var(--sp-5); margin-bottom: var(--sp-4); }
+
+.dns-live-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1.1fr) minmax(0, 2fr) auto 62px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-faint);
+  font-size: var(--fs-sm);
+}
+
+.dns-live-row:last-child { border-bottom: 0; }
+.dns-live-time { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dns-live-client { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dns-live-domain { color: var(--text-1); font-family: var(--font-mono); font-size: var(--fs-micro); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dns-live-ms { color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- KPI strip */
+
+/* Fixed column counts rather than auto-fit: the strip holds eight tiles, and
+   auto-fit packs six onto a wide row and orphans the last two. */
+.dns-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 var(--sp-5);
+}
+
+.dns-kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--r-md);
+  background: linear-gradient(158deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--shadow-1), var(--inset-hi);
+  transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.dns-kpi:hover { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: var(--shadow-2), var(--glow-purple); }
+
+.dns-kpi-label { color: var(--text-3); font-size: 9px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
+
+.kpi-value {
+  color: var(--text-1);
+  font-size: 26px;
+  font-weight: 720;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.kpi-value.is-unavailable { color: var(--text-3); font-size: var(--fs-body); font-weight: 650; letter-spacing: 0; }
+.dns-kpi-note { color: var(--text-3); font-size: var(--fs-eyebrow); letter-spacing: 0.03em; }
+
+.dns-kpi.accent-live .kpi-value { color: var(--cyan); }
+.dns-kpi.accent-live { border-color: var(--live-edge); }
+.dns-kpi.accent-ok .kpi-value { color: var(--ok); }
+.dns-kpi.accent-warn .kpi-value { color: var(--warn); }
+.dns-kpi.accent-crit .kpi-value { color: var(--crit); }
+
+/* ------------------------------------------------------------ traffic graph */
+
+.dns-chart-card { padding: var(--sp-5); }
+
+.dns-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.dns-chart-head h3 { margin: 0; font-size: var(--fs-card-title); font-weight: 700; letter-spacing: -0.02em; }
+
+.dns-chart-legend { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-bottom: var(--sp-3); }
+.dns-chart-legend span { display: inline-flex; align-items: center; gap: 7px; color: var(--text-2); font-size: var(--fs-micro); font-weight: 700; }
+.dns-chart-legend i { width: 10px; height: 3px; border-radius: 2px; background: currentColor; font-style: normal; }
+.dns-legend-total { color: var(--cyan); }
+.dns-legend-blocked { color: var(--crit); }
+
+.dns-chart-wrap { position: relative; }
+#dns-traffic-canvas { display: block; width: 100%; height: 230px; touch-action: pan-y; }
+.dns-chart-empty { margin: 0; padding: var(--sp-6) 0; color: var(--text-3); font-size: var(--fs-body); text-align: center; }
+
+/* Hover read-out. Positioned by the script from the geometry of the last draw,
+   so moving the pointer never triggers a repaint of the chart itself. */
+.dns-chart-tip {
+  position: absolute;
+  top: 4px;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  min-width: 132px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+}
+
+.dns-chart-tip strong { color: var(--text-1); font-size: var(--fs-micro); font-weight: 720; }
+.dns-chart-tip span { color: var(--text-3); font-size: var(--fs-micro); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- topology */
+
+/* Six stages: LAN → gateway → resolvers → cache/filter → upstreams → internet.
+   Three columns divide them into two balanced rows; the connector is suppressed on
+   whichever node starts a row so no line is drawn across a wrap. */
+.dns-topo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--sp-5) 0;
+  padding: var(--sp-5) 0;
+}
+
+.dns-topo-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-5);
+}
+
+/* Connector between stages. The dash drift is 6s, purely decorative, and is
+   switched off by prefers-reduced-motion via the global rule. */
+.dns-topo-stage + .dns-topo-stage::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--sp-5) * -1);
+  right: calc(100% - var(--sp-5));
+  top: 50%;
+  height: 2px;
+  background-image: linear-gradient(90deg, var(--border-strong) 0 8px, transparent 8px 16px);
+  background-size: 16px 2px;
+  animation: dns-flow 6s linear infinite;
+}
+
+.dns-topo-stage.is-live + .dns-topo-stage::before,
+.dns-topo-stage + .dns-topo-stage.is-live::before {
+  background-image: linear-gradient(90deg, rgba(34, 211, 238, 0.65) 0 8px, transparent 8px 16px);
+}
+
+@keyframes dns-flow { to { background-position: 16px 0; } }
+
+.dns-node {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: linear-gradient(150deg, var(--surface-2), var(--surface-1));
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.dns-node:hover { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: var(--glow-purple); }
+.dns-node[disabled] { cursor: default; opacity: 1; }
+.dns-node[disabled]:hover { transform: none; box-shadow: none; border-color: var(--border); }
+
+.dns-node-title { display: flex; align-items: center; gap: 7px; font-size: var(--fs-sm); font-weight: 720; letter-spacing: -0.01em; }
+.dns-node-title::before { content: ""; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--text-3); }
+.dns-node-meta { color: var(--text-3); font-size: var(--fs-eyebrow); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+
+.dns-node.state-ok { border-color: var(--ok-edge); }
+.dns-node.state-ok .dns-node-title::before { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-dim); }
+.dns-node.state-warn { border-color: var(--warn-edge); }
+.dns-node.state-warn .dns-node-title::before { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-dim); }
+.dns-node.state-crit { border-color: var(--crit-edge); }
+.dns-node.state-crit .dns-node-title::before { background: var(--crit); box-shadow: 0 0 0 3px var(--crit-dim); }
+.dns-node.state-live { border-color: var(--live-edge); }
+.dns-node.state-live .dns-node-title::before { background: var(--cyan); box-shadow: 0 0 0 3px var(--live-dim); }
+
+/* ------------------------------------------------------------------- tables */
+
+.dns-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.dns-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); min-width: min(100%, 560px); }
+
+.dns-table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: var(--fs-eyebrow);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dns-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-faint);
+  color: var(--text-1);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.dns-table tbody tr { transition: background-color var(--dur-fast) var(--ease); }
+.dns-table tbody tr:hover { background: var(--surface-hover); }
+.dns-table tbody tr:last-child td { border-bottom: 0; }
+.dns-table td.dns-wrap { white-space: normal; overflow-wrap: anywhere; }
+.dns-table td.numeric, .dns-table th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Rows that open a drawer advertise it. */
+.dns-table tr.is-clickable { cursor: pointer; }
+.dns-table tr.is-clickable:hover { background: var(--surface-active); }
+.dns-table tr.is-clickable:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+
+.dns-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--purple-soft);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px dotted var(--border-strong);
+}
+
+.dns-link:hover { color: var(--text-1); }
+
+/* ------------------------------------------------------------ query filters */
+
+.dns-client-filter { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; margin: var(--sp-3) 0; }
+.dns-client-filter label { color: var(--text-3); font-size: var(--fs-sm); }
+
+.dns-client-filter input {
+  font: inherit;
+  font-size: var(--fs-body);
+  min-height: var(--tap);
+  flex: 1 1 220px;
+  padding: 10px 15px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  color: var(--text-1);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.dns-client-filter select {
+  font: inherit;
+  font-size: var(--fs-body);
+  min-height: var(--tap);
+  flex: 0 0 auto;
+  padding: 10px 15px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.dns-client-filter input:focus,
+.dns-client-filter select:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.22); }
+
+.dns-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin: var(--sp-3) 0; }
+
+/* ------------------------------------------------------------------- drawer */
+
+.dns-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(5, 4, 10, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.dns-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 61;
+  width: min(100%, 460px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-left: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(20, 15, 32, 0.98), rgba(11, 8, 18, 0.98));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: -24px 0 60px rgba(3, 2, 8, 0.6);
+  animation: dns-drawer-in var(--dur) var(--ease);
+}
+
+@keyframes dns-drawer-in { from { transform: translateX(16px); opacity: 0; } }
+
+.dns-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--border-faint);
+}
+
+.dns-drawer-head h3 { margin: 0 0 6px; font-size: var(--fs-card-title); font-weight: 720; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.dns-drawer-head p { margin: 0; color: var(--text-3); font-size: var(--fs-micro); overflow-wrap: anywhere; }
+
+.dns-drawer-close {
+  flex: 0 0 auto;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
+  color: var(--text-2);
+  font: 800 var(--fs-body)/1 var(--font-sans);
+  cursor: pointer;
+}
+
+.dns-drawer-close:hover { color: var(--text-1); border-color: var(--border-strong); background: var(--surface-active); }
+
+.dns-drawer-body { flex: 1; overflow-y: auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); align-content: start; }
+.dns-drawer-body h4 { margin: 0 0 var(--sp-2); color: var(--text-3); font-size: 9px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
+
+.dns-drawer-body dl { margin: 0; }
+.dns-drawer-body dl div { display: flex; justify-content: space-between; gap: var(--sp-4); padding: 9px 0; border-bottom: 1px solid var(--border-faint); }
+.dns-drawer-body dl div:last-child { border-bottom: 0; }
+.dns-drawer-body dt { color: var(--text-3); font-size: var(--fs-sm); }
+.dns-drawer-body dd { margin: 0; max-width: 64%; color: var(--text-1); font-size: var(--fs-sm); font-weight: 650; text-align: right; overflow-wrap: anywhere; }
+.dns-drawer-body .dns-mono { font-family: var(--font-mono); font-size: var(--fs-micro); }
+.dns-drawer-empty { margin: 0; color: var(--text-3); font-size: var(--fs-sm); }
+
+/* ------------------------------------------------- semantic status extras */
+
+/* Cache is informational, not a warning. Scoped to the DNS badge so the shared
+   amber "warning" meaning is untouched everywhere else. */
+.dns-badge.cached { color: var(--live); border-color: var(--live-edge); background: var(--live-dim); }
+.dns-badge.warn { color: var(--warn); border-color: var(--warn-edge); background: var(--warn-dim); }
+
+/* A filter list that is switched off is a configuration, not a failure: neutral
+   grey. ERROR (enabled but carrying no rules) is the one that earns red. */
+.cc-state.DISABLED { color: var(--text-3); border-color: var(--border); background: var(--surface-3); }
+.cc-state.ERROR { color: var(--crit); border-color: var(--crit-edge); background: var(--crit-dim); }
+
+.dns-badge.category-infrastructure { color: var(--purple-soft); border-color: var(--info-edge); background: var(--info-dim); }
+.dns-badge.category-user_device { color: var(--ok); border-color: var(--ok-edge); background: var(--ok-dim); }
+.dns-badge.category-iot { color: var(--live); border-color: var(--live-edge); background: var(--live-dim); }
+.dns-badge.category-unknown { color: var(--text-3); border-color: var(--border); background: var(--surface-3); }
+
+/* A fallback upstream is not a peer of the primaries, so it is drawn apart. */
+.cc-card.is-fallback { border-style: dashed; background: linear-gradient(150deg, var(--surface-1), var(--bg-sunken)); }
+
+.cc-card.is-clickable { cursor: pointer; }
+.cc-card.is-clickable:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2), var(--glow-purple); }
+.cc-card.is-clickable:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+
+/* ================================================================ responsive */
+
+/* Desktop keeps four KPI columns; a 12.4" tablet in landscape gets three, in
+   portrait two, and a phone two narrow ones. Tables never widen the page —
+   .dns-table-wrap scrolls horizontally instead. */
+
+@media (min-width: 1081px) {
+  .dns-topo-stage:nth-child(4)::before { display: none; }
+}
+
+@media (max-width: 1280px) {
+  .dns-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1080px) {
+  .dns-topo { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--sp-5); }
+  .dns-topo-stage { padding: 0 var(--sp-3); }
+  .dns-topo-stage + .dns-topo-stage::before { left: calc(var(--sp-3) * -1); right: calc(100% - var(--sp-3)); }
+  .dns-topo-stage:nth-child(odd)::before { display: none; }
+  .dns-live-row { grid-template-columns: 74px minmax(0, 1fr) minmax(0, 1.6fr) auto; }
+  .dns-live-ms { display: none; }
+}
+
+@media (max-width: 900px) {
+  .dns-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dns-strip-lead, .dns-strip-item { flex-basis: 108px; }
+}
+
+@media (max-width: 680px) {
+  .dns-topo { grid-template-columns: 1fr; row-gap: var(--sp-4); }
+  .dns-topo-stage { padding: 0; }
+  .dns-topo-stage + .dns-topo-stage::before { display: none; }
+  .kpi-value { font-size: 22px; }
+  .dns-drawer { width: 100%; }
+  .dns-subnav { top: 64px; }
+  .dns-live-row { grid-template-columns: 68px minmax(0, 1fr) auto; }
+  .dns-live-client { display: none; }
+  .dns-client-filter input, .dns-client-filter select { flex: 1 1 100%; }
+}
+
+/* The chart and the live pulse are the only motion here; both stop entirely. */
+@media (prefers-reduced-motion: reduce) {
+  .dns-topo-stage + .dns-topo-stage::before { animation: none; }
+  .dns-drawer { animation: none; }
+  .dns-live-toggle.is-on::before { animation: none; }
+}

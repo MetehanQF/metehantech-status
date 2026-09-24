@@ -1,0 +1,1 @@
+"""External watchdog deployment package."""
