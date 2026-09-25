@@ -178,6 +178,35 @@ live infrastructure skip themselves with a clear reason rather than failing.
 
 ---
 
+## Resilience testing
+
+The unit suite proves the code is correct. [`resilience/`](resilience/) proves
+the *backups* are — by trying to break them.
+
+| Tool | Proves |
+|---|---|
+| `failure_sim.py` | the validator **refuses** corrupted restore points — checksum mismatches, truncated archives, injected symlinks, stale backups, storage-guard and SSH refusals |
+| `restore_lab.py` | a backup can actually be **restored**: files extract and hash-match, the pgdump loads into an isolated container, the schema is sane, and a damaged dump is rejected |
+| `storage_analysis.py` | how long the storage runway really is, from two real measurements rather than one |
+| `config_baseline.py` | configuration drift, by fingerprint only — file contents are never emitted |
+| `soak_collector.py` | behaviour over hours, because a single sample lies |
+
+These run against the application's real modules, not a reimplementation.
+
+**They are dry-run or read-only by default.** The two destructive tools do
+nothing without `--confirm`, require an explicit `--lab` directory, and refuse
+one that overlaps the project, `data/`, `/etc`, `/srv` or `/var`:
+
+```bash
+python3 resilience/failure_sim.py          # lists scenarios, changes nothing
+python3 resilience/restore_lab.py          # lists required inputs, starts nothing
+```
+
+See [`resilience/README.md`](resilience/README.md) for lab usage and for the
+list of commands that must never be pointed at production.
+
+---
+
 ## Security model
 
 **Secrets never enter this repository.** They live outside it, and the source
@@ -219,6 +248,7 @@ ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `100.64.0.0/10`).
 *.py                  application modules
 static/ templates/    front-end
 tests/                11 test modules
+resilience/           backup + restore failure harness
 deploy/               systemd units, install scripts, Compose files (templates)
 watchdog_pcold/       standalone watchdog for the secondary node
 *.example             configuration templates — no real values
