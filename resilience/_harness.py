@@ -22,6 +22,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 #: The application this harness tests. `parents[1]` because we live in resilience/.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -53,6 +54,35 @@ def write_results(name, payload):
     target.write_text(json.dumps(payload, indent=1))
     print(f"  results -> {target}")
     return target
+
+
+# ------------------------------------------------------- deferred configuration
+
+class PcoldSSH(NamedTuple):
+    """The secondary node's SSH identity, resolved from deployment configuration."""
+
+    key: str
+    user: str
+    hosts: tuple
+
+
+def pcold_ssh():
+    """Resolve the secondary node's SSH identity **at call time**.
+
+    Deliberately not module-level state. Reading a mandatory deployment value
+    while a module is being imported makes that module unloadable on a clean
+    clone, so an unconfigured checkout could not even import the tool to ask it
+    for `--help`. Resolving here means `DeploymentConfigError` is raised only
+    when a caller genuinely needs to reach the peer.
+    """
+    import deployment
+    import network
+
+    return PcoldSSH(
+        key=str(deployment.path("BACKUP_SSH_KEY")),
+        user=deployment.get("BACKUP_REMOTE_USER"),
+        hosts=(network.get("PCOLD_LAN_IP"), network.get("PCOLD_TAILSCALE_IP")),
+    )
 
 
 # --------------------------------------------------------------- safety guards

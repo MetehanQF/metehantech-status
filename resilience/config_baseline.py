@@ -9,7 +9,13 @@ from the baseline must be distinguishable from a config nobody could see.
 
 Usage:
     python3 config_baseline.py                 write config-baseline.json
+    python3 config_baseline.py --output PATH   write it somewhere explicit
     python3 config_baseline.py --compare PATH  diff live state against a baseline
+
+The default output location comes from OPENCLAW_WORKSPACE. When that is not
+configured the tool says so and exits 3 rather than guessing a path, and the
+secondary-node half of the baseline is recorded as "not configured" rather than
+failing the run.
 """
 
 from datetime import datetime, timezone
@@ -21,79 +27,93 @@ import shlex
 import subprocess
 import sys
 
-# Optional: skipped entirely when OPENCLAW_WORKSPACE is not configured.
-WORKSPACE = deployment.optional_path("OPENCLAW_WORKSPACE")
-STATUS = deployment.PROJECT_ROOT
-OUTPUT = WORKSPACE / "config-baseline.json"
-
-PCOLD_SSH_KEY = str(deployment.path("BACKUP_SSH_KEY"))
-from _harness import results_dir, write_results  # noqa: E402  (repo-relative path setup)
+from _harness import pcold_ssh  # noqa: E402  (also sets up the repo-relative path)
 import deployment  # noqa: E402
-import network  # noqa: E402
-PCOLD_HOSTS = (network.get("PCOLD_LAN_IP"), network.get("PCOLD_TAILSCALE_IP"))
-PCOLD_USER = deployment.get("BACKUP_REMOTE_USER")
 
-GROUPS = {
-    "system_units": [
-        "/etc/systemd/system/metehantech-status.service",
-        "/etc/systemd/system/metehantech-home.service",
-        "/etc/systemd/system/clan-web.service",
-        "/etc/systemd/system/cloudflared.service",
-        "/etc/systemd/system/metehantech-frigate.service",
-        "/etc/systemd/system/metehantech-camera-pcold-route.service",
-        "/etc/systemd/system/metehantech-backup-pi.service",
-        "/etc/systemd/system/metehantech-backup-pcold.service",
-        "/etc/systemd/system/metehantech-backup-cloud.service",
-    ],
-    "user_units": [
-        str(Path.home() / ".config/systemd/user" / f"metehantech-backup-auto-{n}.{s}")
-        for n in ("pi", "pcold", "cloud") for s in ("service", "timer")
-    ],
-    "docker_compose": [
-        "/opt/metehantech-cloud/compose.yaml",
-        "/opt/metehantech-cloud/.env",
-        "/opt/metehantech-cloud/redis.conf",
-        "/opt/metehantech-cloud/apache-vhost.conf",
-        "/opt/metehantech-cloud/apache-proxy.conf",
-    ],
-    "frigate_config": [
-        "/opt/metehantech-camera/config/config.yml",
-        "/opt/metehantech-camera/config/config.yaml",
-    ],
-    "backup_scripts": [
-        str(STATUS / n) for n in (
-            "backups.py", "backup_job.py", "backup_hardening.py",
-            "backup_retention.py", "backup_schedule.py", "backup_supplement.py",
-            "backup_validator.py",
-        )
-    ],
-    "status_scripts": [
-        str(STATUS / n) for n in (
-            "app.py", "wsgi.py", "admin.py", "alerts.py", "activity.py",
-            "camera.py", "events.py", "history.py", "incidents.py",
-            "requirements.txt", "install-systemd.sh", "metehantech-status.service",
-        )
-    ],
-    # Sibling applications to fingerprint, from BACKUP_EXTRA_SOURCES. Empty when
-    # unconfigured — nothing is guessed.
-    "app_config": [
-        str(root / name)
-        for root in deployment.path_list("BACKUP_EXTRA_SOURCES")
-        for name in ("app.py", "requirements.txt")
-    ],
-    # This harness fingerprints itself: drift here means the checks changed.
-    "automation_scripts": [
-        str(Path(__file__).resolve().parent / n)
-        for n in ("restore_lab.py", "config_baseline.py",
-                  "soak_collector.py", "failure_sim.py", "storage_analysis.py")
-    ],
-    "secret_bearing_fingerprint_only": [
-        "/etc/metehantech-status/admin.env",
-        "/etc/clan-web.env",
-        "/etc/cloudflared/token",
-        str(deployment.path("BACKUP_SSH_KEY")),
-    ],
-}
+#: Derived from the module's own location, so it needs no configuration.
+STATUS = deployment.PROJECT_ROOT
+
+
+def default_output():
+    """Where a baseline is written when `--output` is not given.
+
+    `None` when `OPENCLAW_WORKSPACE` is unconfigured. The tool then reports that
+    it is not configured and exits, rather than inventing a location.
+    """
+    workspace = deployment.optional_path("OPENCLAW_WORKSPACE")
+    return workspace / "config-baseline.json" if workspace else None
+
+
+def groups():
+    """The local fingerprint set.
+
+    A function, not a module constant: it reads `BACKUP_SSH_KEY`, and resolving a
+    mandatory deployment value at import time would make this module unloadable
+    on an unconfigured clone.
+    """
+    return {
+        "system_units": [
+            "/etc/systemd/system/metehantech-status.service",
+            "/etc/systemd/system/metehantech-home.service",
+            "/etc/systemd/system/clan-web.service",
+            "/etc/systemd/system/cloudflared.service",
+            "/etc/systemd/system/metehantech-frigate.service",
+            "/etc/systemd/system/metehantech-camera-pcold-route.service",
+            "/etc/systemd/system/metehantech-backup-pi.service",
+            "/etc/systemd/system/metehantech-backup-pcold.service",
+            "/etc/systemd/system/metehantech-backup-cloud.service",
+        ],
+        "user_units": [
+            str(Path.home() / ".config/systemd/user" / f"metehantech-backup-auto-{n}.{s}")
+            for n in ("pi", "pcold", "cloud") for s in ("service", "timer")
+        ],
+        "docker_compose": [
+            "/opt/metehantech-cloud/compose.yaml",
+            "/opt/metehantech-cloud/.env",
+            "/opt/metehantech-cloud/redis.conf",
+            "/opt/metehantech-cloud/apache-vhost.conf",
+            "/opt/metehantech-cloud/apache-proxy.conf",
+        ],
+        "frigate_config": [
+            "/opt/metehantech-camera/config/config.yml",
+            "/opt/metehantech-camera/config/config.yaml",
+        ],
+        "backup_scripts": [
+            str(STATUS / n) for n in (
+                "backups.py", "backup_job.py", "backup_hardening.py",
+                "backup_retention.py", "backup_schedule.py", "backup_supplement.py",
+                "backup_validator.py",
+            )
+        ],
+        "status_scripts": [
+            str(STATUS / n) for n in (
+                "app.py", "wsgi.py", "admin.py", "alerts.py", "activity.py",
+                "camera.py", "events.py", "history.py", "incidents.py",
+                "requirements.txt", "install-systemd.sh", "metehantech-status.service",
+            )
+        ],
+        # Sibling applications to fingerprint, from BACKUP_EXTRA_SOURCES. Empty when
+        # unconfigured — nothing is guessed.
+        "app_config": [
+            str(root / name)
+            for root in deployment.path_list("BACKUP_EXTRA_SOURCES")
+            for name in ("app.py", "requirements.txt")
+        ],
+        # This harness fingerprints itself: drift here means the checks changed.
+        "automation_scripts": [
+            str(Path(__file__).resolve().parent / n)
+            for n in ("restore_lab.py", "config_baseline.py",
+                      "soak_collector.py", "failure_sim.py", "storage_analysis.py")
+        ],
+        # Fingerprinted, never read. The backup key joins the set only when it is
+        # configured; an unconfigured clone simply has one fewer path to watch.
+        "secret_bearing_fingerprint_only": [
+            "/etc/metehantech-status/admin.env",
+            "/etc/clan-web.env",
+            "/etc/cloudflared/token",
+        ] + ([key] if (key := deployment.optional("BACKUP_SSH_KEY")) else []),
+    }
+
 
 PCOLD_GROUPS = {
     "pcold_system_units": [
@@ -128,27 +148,27 @@ def fingerprint_local(path):
     return entry
 
 
-def ssh_base(host):
-    return ["ssh", "-i", PCOLD_SSH_KEY, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
+def ssh_base(ssh, host):
+    return ["ssh", "-i", ssh.key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
             "-o", "PasswordAuthentication=no", "-o", "StrictHostKeyChecking=yes",
-            "-o", "ConnectTimeout=8", f"{PCOLD_USER}@{host}"]
+            "-o", "ConnectTimeout=8", f"{ssh.user}@{host}"]
 
 
-def choose_host():
-    for host in PCOLD_HOSTS:
-        result = subprocess.run(ssh_base(host) + ["true"], capture_output=True, timeout=15, check=False)
+def choose_host(ssh):
+    for host in ssh.hosts:
+        result = subprocess.run(ssh_base(ssh, host) + ["true"], capture_output=True, timeout=15, check=False)
         if result.returncode == 0:
             return host
     return None
 
 
-def fingerprint_remote(host, paths):
+def fingerprint_remote(ssh, host, paths):
     """One round trip: stat + sha256sum for every path, tolerating unreadable files."""
     script = "for f in %s; do if [ -f \"$f\" ]; then printf '%%s|' \"$f\"; " \
              "stat -c '%%s|%%a|%%u|%%g' \"$f\" 2>/dev/null | tr -d '\\n'; printf '|'; " \
              "sha256sum \"$f\" 2>/dev/null | cut -d' ' -f1 | tr -d '\\n'; echo; " \
              "else echo \"$f|||||ABSENT\"; fi; done" % " ".join(shlex.quote(p) for p in paths)
-    result = subprocess.run(ssh_base(host) + ["sh", "-c", shlex.quote(script)],
+    result = subprocess.run(ssh_base(ssh, host) + ["sh", "-c", shlex.quote(script)],
                             capture_output=True, text=True, timeout=120, check=False)
     entries = {}
     for line in result.stdout.splitlines():
@@ -174,22 +194,35 @@ def build():
         "note": "SHA256/size/mode fingerprints only. No file contents are recorded.",
         "nodes": {"pi": {}, "pcold": {}},
     }
-    for group, paths in GROUPS.items():
+    for group, paths in groups().items():
         baseline["nodes"]["pi"][group] = {p: fingerprint_local(p) for p in paths}
 
-    host = choose_host()
+    # The secondary node needs deployment configuration. Without it the local
+    # half of the baseline is still worth having, so record why the remote half
+    # is missing instead of failing the whole run.
+    try:
+        ssh = pcold_ssh()
+    except deployment.DeploymentConfigError as error:
+        ssh = None
+        unreachable = f"not configured: {error}"
+    else:
+        host = choose_host(ssh)
+        unreachable = "PcOld unreachable at baseline time"
+
     baseline["nodes"]["pcold"]["_transport"] = {
-        "host": host, "account": PCOLD_USER,
-        "reachable": host is not None,
+        "host": host if ssh else None,
+        "account": ssh.user if ssh else None,
+        "reachable": bool(ssh) and host is not None,
+        "configured": ssh is not None,
         "note": "Restricted backup account: no Docker socket, no /var/lib/docker access.",
     }
-    if host:
+    if ssh and host:
         for group, paths in PCOLD_GROUPS.items():
-            baseline["nodes"]["pcold"][group] = fingerprint_remote(host, paths)
+            baseline["nodes"]["pcold"][group] = fingerprint_remote(ssh, host, paths)
     else:
         for group, paths in PCOLD_GROUPS.items():
             baseline["nodes"]["pcold"][group] = {
-                p: {"present": False, "reason": "PcOld unreachable at baseline time"} for p in paths}
+                p: {"present": False, "reason": unreachable} for p in paths}
 
     counts = {"present": 0, "absent": 0, "unreadable": 0}
     for node in baseline["nodes"].values():
@@ -236,15 +269,27 @@ def compare(baseline_path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compare", metavar="PATH", default=None)
-    parser.add_argument("--output", default=str(OUTPUT))
+    parser.add_argument("--output", default=None,
+                        help="where to write the baseline. Defaults to "
+                             "$OPENCLAW_WORKSPACE/config-baseline.json; required "
+                             "when that is not configured.")
     args = parser.parse_args(argv)
 
     if args.compare:
         print(json.dumps(compare(args.compare), indent=2))
         return 0
+
+    output = Path(args.output) if args.output else default_output()
+    if output is None:
+        print("NOT CONFIGURED — OPENCLAW_WORKSPACE is unset, so there is no default "
+              "location to write the baseline to.")
+        print("  Set OPENCLAW_WORKSPACE in /etc/metehantech-status/deploy.env, "
+              "or pass --output PATH.")
+        return 3
+
     baseline = build()
-    Path(args.output).write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {args.output}")
+    output.write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {output}")
     print(json.dumps(baseline["summary"], indent=2))
     return 0
 

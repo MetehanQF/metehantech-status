@@ -9,9 +9,8 @@ a single point, which would be a guess wearing a number's clothes.
 Read-only: measures, projects, and deletes nothing.
 """
 
-from _harness import results_dir, write_results  # noqa: E402  (repo-relative path setup)
+from _harness import pcold_ssh, results_dir, write_results  # noqa: E402  (repo-relative path setup)
 import deployment  # noqa: E402
-import network  # noqa: E402
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -19,11 +18,15 @@ import shlex
 import subprocess
 
 # Output location comes from RESILIENCE_RESULTS_DIR (default: cwd).
-SSH_KEY = str(deployment.path("BACKUP_SSH_KEY"))
-PCOLD = deployment.get("BACKUP_REMOTE_USER") + "@" + network.get("PCOLD_LAN_IP")
-# Optional: camera media measurements are skipped when this is not configured.
-CAMERA_DIR = deployment.optional("CAMERA_MEDIA_DIR")
 GIB = 1024 ** 3
+
+#: Resolved on first use, not at import — see `_harness.pcold_ssh`.
+_PCOLD_SSH = None
+
+
+def camera_dir():
+    """Camera media directory, or None. Those measurements are then skipped."""
+    return deployment.optional("CAMERA_MEDIA_DIR")
 
 
 def sh(command, timeout=120):
@@ -32,10 +35,15 @@ def sh(command, timeout=120):
 
 
 def pcold(command, timeout=120):
-    ssh = ["ssh", "-i", SSH_KEY, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
-           "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=8", PCOLD,
-           "sh", "-c", shlex.quote(command)]
-    return subprocess.run(ssh, capture_output=True, text=True, timeout=timeout, check=False).stdout
+    """Run a command on the secondary node. Resolves its identity on first call."""
+    global _PCOLD_SSH
+    if _PCOLD_SSH is None:
+        _PCOLD_SSH = pcold_ssh()
+    argv = ["ssh", "-i", _PCOLD_SSH.key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
+            "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=8",
+            f"{_PCOLD_SSH.user}@{_PCOLD_SSH.hosts[0]}",
+            "sh", "-c", shlex.quote(command)]
+    return subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False).stdout
 
 
 def filesystem(df_output):
@@ -61,7 +69,11 @@ def rate(first, second):
 
 def frigate_rate():
     """Recording growth from per-hour directory sizes on the camera volume."""
-    listing = sh(f"for d in {CAMERA_DIR}/recordings/*/*/; do "
+    camera = camera_dir()
+    if not camera:
+        return {"hours_observed": 0, "bytes_per_day": None,
+                "reason": "CAMERA_MEDIA_DIR is not configured; measurement skipped"}
+    listing = sh(f"for d in {camera}/recordings/*/*/; do "
                  "printf '%s %s\\n' \"$d\" \"$(du -sb \"$d\" | cut -f1)\"; done")
     hours = []
     for line in listing.strip().splitlines():
@@ -74,9 +86,9 @@ def frigate_rate():
     # Drop the first and last hour: both are partial and would drag the mean down.
     interior = sorted(size for _, size in hours)[1:-1]
     mean_hour = sum(interior) / len(interior)
-    span = sh(f"find {CAMERA_DIR}/recordings -type f -printf '%T@\\n' | sort -n")
+    span = sh(f"find {camera}/recordings -type f -printf '%T@\\n' | sort -n")
     stamps = [float(v) for v in span.split() if v]
-    total = int(sh(f"du -sb {CAMERA_DIR}/recordings | cut -f1").split()[0])
+    total = int(sh(f"du -sb {camera}/recordings | cut -f1").split()[0])
     observed_seconds = (stamps[-1] - stamps[0]) if len(stamps) > 1 else 0
     return {
         "hours_observed": len(hours),
@@ -114,7 +126,8 @@ def main():
     now = datetime.now(timezone.utc).isoformat()
     pi_fs = filesystem(sh("df -Pk /"))
     pcold_fs = filesystem(pcold("df -Pk /"))
-    camera_fs = filesystem(sh(f"df -Pk {CAMERA_DIR}"))
+    camera = camera_dir()
+    camera_fs = filesystem(sh(f"df -Pk {shlex.quote(camera)}")) if camera else None
 
     # Backup artefact growth, measured between two real restore points of the same flow.
     restore_points = []

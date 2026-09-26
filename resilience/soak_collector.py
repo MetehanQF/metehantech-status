@@ -18,9 +18,8 @@ Design constraints this file has to honour:
     disk it is supposed to be watching.
 """
 
-from _harness import results_dir, write_results  # noqa: E402  (repo-relative path setup)
+from _harness import pcold_ssh, results_dir, write_results  # noqa: E402  (repo-relative path setup)
 import deployment  # noqa: E402
-import network  # noqa: E402
 from datetime import datetime, timezone
 import json
 import os
@@ -41,9 +40,9 @@ KEEP_ROTATIONS = 2
 DURATION = int(os.environ.get("SOAK_DURATION_SECONDS", 5 * 3600))
 INTERVAL = int(os.environ.get("SOAK_INTERVAL_SECONDS", 300))
 
-SSH_KEY = str(deployment.path("BACKUP_SSH_KEY"))
-PCOLD_HOSTS = (network.get("PCOLD_LAN_IP"), network.get("PCOLD_TAILSCALE_IP"))
-PCOLD_USER = deployment.get("BACKUP_REMOTE_USER")
+#: Resolved on first use, not at import — see `_harness.pcold_ssh`. A soak run on
+#: an unconfigured clone still samples the local host; only the peer probe skips.
+_PCOLD_SSH = None
 
 HTTP_TARGETS = {
     "status_center": "http://127.0.0.1:5000/",
@@ -75,14 +74,25 @@ def sh(command, timeout=20):
 
 
 def pcold_sh(command, timeout=25):
-    for host in PCOLD_HOSTS:
-        argv = ["ssh", "-i", SSH_KEY, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
+    global _PCOLD_SSH
+    if _PCOLD_SSH is None:
+        try:
+            _PCOLD_SSH = pcold_ssh()
+        except deployment.DeploymentConfigError as error:
+            # A probe that cannot be configured is recorded, never fatal: a soak
+            # with one skipped probe is still evidence.
+            return {"host": None, "reachable": False, "configured": False,
+                    "output": f"not configured: {error}"}
+    ssh = _PCOLD_SSH
+    output = ""
+    for host in ssh.hosts:
+        argv = ["ssh", "-i", ssh.key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
                 "-o", "PasswordAuthentication=no", "-o", "StrictHostKeyChecking=yes",
-                "-o", "ConnectTimeout=6", f"{PCOLD_USER}@{host}", "sh", "-c", shlex.quote(command)]
+                "-o", "ConnectTimeout=6", f"{ssh.user}@{host}", "sh", "-c", shlex.quote(command)]
         output, code = run(argv, timeout)
         if code == 0:
-            return {"host": host, "reachable": True, "output": output}
-    return {"host": None, "reachable": False, "output": output}
+            return {"host": host, "reachable": True, "configured": True, "output": output}
+    return {"host": None, "reachable": False, "configured": True, "output": output}
 
 
 # ------------------------------------------------------------------ Pi probes

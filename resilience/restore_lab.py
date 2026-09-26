@@ -162,6 +162,9 @@ def run_lab(args):
       counts={t:c.execute('select count(*) from "'+t+'"').fetchone()[0] for t in ['monitor','heartbeat','user'] if t in tables}
       results['uptime_kuma']={'status':'RESTORE_TESTED' if integrity=='ok' and 'monitor' in tables else 'FAIL','scope':'SQLite restore/open/query only; no application container test','integrity':integrity,'table_count':len(tables),'row_counts':counts,'seconds':round(time.monotonic()-start,3)}
     results['portainer']={'status':'SKIPPED','reason':'Restricted backup account has no Docker/volume access; supported authenticated export unavailable; no live BoltDB copy or production restart attempted'}
+    results['finished_at']=datetime.now(timezone.utc).isoformat()
+    save()
+    return results
 
 def main(argv=None):
     args = build_parser().parse_args(argv)

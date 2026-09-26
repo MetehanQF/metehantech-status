@@ -10,8 +10,8 @@ Every alert it raises is backed by a measurement it took itself, and every backu
 it reports as good has been verified byte-for-byte.
 
 > **Status:** running continuously in production on the author's home lab.
-> ~7,300 lines of application code and ~2,800 lines of tests (11 test modules,
-> 209 tests / 543 subtests).
+> ~7,300 lines of application code and ~3,100 lines of tests (12 test modules,
+> 234 tests / 548 subtests).
 
 ---
 
@@ -172,9 +172,15 @@ so a real machine's configuration can never leak into a test run. Tests that nee
 live infrastructure skip themselves with a clear reason rather than failing.
 
 ```
-206 passed, 4 skipped          # clean clone, nothing configured
-209 passed, 543 subtests       # with live configuration present
+231 passed, 4 skipped          # clean clone, nothing configured
+234 passed, 548 subtests       # with live configuration present
 ```
+
+`tests/test_resilience_harness.py` holds the harness's own contract: every
+`resilience/` module must survive a **real import** on a clone with nothing
+configured. `py_compile` is not enough — it proves a file parses, not that it
+loads — so deployment values are resolved when a caller needs them rather than
+as a side effect of importing.
 
 ---
 
@@ -247,7 +253,7 @@ ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `100.64.0.0/10`).
 ```
 *.py                  application modules
 static/ templates/    front-end
-tests/                11 test modules
+tests/                12 test modules
 resilience/           backup + restore failure harness
 deploy/               systemd units, install scripts, Compose files (templates)
 watchdog_pcold/       standalone watchdog for the secondary node
