@@ -1,5 +1,7 @@
 # MetehanTech Status
 
+[![CI](https://github.com/MetehanQF/metehantech-status/actions/workflows/ci.yml/badge.svg)](https://github.com/MetehanQF/metehantech-status/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) ![Tests](https://img.shields.io/badge/tests-231%20passed-brightgreen)
+
 A self-hosted **control centre for a two-node home lab**: one primary node (a
 Raspberry Pi 5 running the services) and one secondary node (an old laptop acting
 as NFS camera storage, backup target and external watchdog).
