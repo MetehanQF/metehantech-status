@@ -358,6 +358,25 @@ def index():
     return render_template("index.html")
 
 
+# Manifest ve servis calisan kok dizinden sunulur: servis calisanin kapsami
+# kendi yolunu asamaz, /static/sw.js yalnizca /static/ altini kontrol ederdi.
+@app.get("/manifest.webmanifest")
+def manifest():
+    response = app.send_static_file("manifest.webmanifest")
+    response.mimetype = "application/manifest+json"
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+@app.get("/sw.js")
+def service_worker():
+    response = app.send_static_file("sw.js")
+    response.mimetype = "text/javascript"
+    # Tarayici guncel servis calisani gormeli; bayat kopya kilitlenmeye yol acar.
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.get("/api/status")
 def status():
     from control_center import build_summary, cached_status
