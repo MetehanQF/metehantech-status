@@ -259,6 +259,7 @@ tests/                12 test modules
 resilience/           backup + restore failure harness
 deploy/               systemd units, install scripts, Compose files (templates)
 watchdog_pcold/       standalone watchdog for the secondary node
+pcold_metrics/        PcOld metrics agent (interval CPU sampling)
 *.example             configuration templates — no real values
 ```
 

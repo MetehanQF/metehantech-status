@@ -2,9 +2,11 @@
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import math
 import os
 import shutil
 import subprocess
+import threading
 import time
 
 
@@ -65,25 +67,68 @@ def get_load():
         return None
 
 
-def read_proc_stat():
-    with open("/proc/stat", "r") as f:
+# CPU utilization averaged from the newest stored /proc/stat snapshot that is at least
+# MIN_WINDOW seconds old up to now (~60 s with the Pi collector). Never sleeps. Warm-up,
+# counter resets and read errors return None (JSON null) instead of a fabricated 0.
+MIN_WINDOW = 30.0
+MAX_WINDOW = 300.0
+STORE_SPACING = 5.0
+
+
+def read_proc_stat(path="/proc/stat"):
+    with open(path, "r") as f:
         parts = f.readline().split()
-    values = list(map(int, parts[1:]))
+    if not parts or parts[0] != "cpu":
+        raise ValueError("unexpected /proc/stat format")
+    values = list(map(int, parts[1:9]))  # user..steal; guest is already in user/nice
+    if len(values) < 5:
+        raise ValueError("unexpected /proc/stat format")
     idle = values[3] + values[4]  # idle + iowait
     total = sum(values)
     return idle, total
 
 
+class CpuSampler:
+    def __init__(self, read_counters=read_proc_stat, clock=time.monotonic):
+        self._read = read_counters
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._snapshots = []
+
+    def sample(self):
+        with self._lock:
+            now = self._clock()
+            try:
+                idle, total = self._read()
+            except (OSError, ValueError):
+                return None
+            self._snapshots = [s for s in self._snapshots if now - s[0] <= MAX_WINDOW]
+            reference = None
+            for snap in reversed(self._snapshots):
+                if now - snap[0] >= MIN_WINDOW:
+                    reference = snap
+                    break
+            if not self._snapshots or now - self._snapshots[-1][0] >= STORE_SPACING:
+                self._snapshots.append((now, idle, total))
+            if reference is None:
+                return None
+            total_delta = total - reference[2]
+            idle_delta = idle - reference[1]
+            if total_delta <= 0 or idle_delta < 0 or idle_delta > total_delta:
+                self._snapshots = [(now, idle, total)]
+                return None
+            value = (1 - idle_delta / total_delta) * 100
+            if not math.isfinite(value):
+                return None
+            return round(min(100.0, max(0.0, value)), 1)
+
+
+CPU_SAMPLER = CpuSampler()
+
+
 def get_cpu():
     try:
-        idle1, total1 = read_proc_stat()
-        time.sleep(0.3)
-        idle2, total2 = read_proc_stat()
-        total_delta = total2 - total1
-        idle_delta = idle2 - idle1
-        if total_delta <= 0:
-            return None
-        return round((1 - idle_delta / total_delta) * 100, 1)
+        return CPU_SAMPLER.sample()
     except Exception:
         return None
 
@@ -147,7 +192,9 @@ class MetricsHandler(BaseHTTPRequestHandler):
         pass
 
 
-server = HTTPServer(("0.0.0.0", 8765), MetricsHandler)
+if __name__ == "__main__":
+    CPU_SAMPLER.sample()  # baseline at start; first value after MIN_WINDOW
+    server = HTTPServer(("0.0.0.0", 8765), MetricsHandler)
 
-print("MetehanTech metrics server listening on port 8765")
-server.serve_forever()
+    print("MetehanTech metrics server listening on port 8765")
+    server.serve_forever()

@@ -7,12 +7,12 @@ import shutil
 import sqlite3
 import subprocess
 
-import psutil
 import requests
 import urllib3
 from flask import Flask, jsonify, render_template, request
 
 from admin import configure_admin
+from cpu_sampler import CpuSampler
 from history import RANGES, get_history, start_collector
 from events import SEVERITIES, SOURCE_PATTERN, get_events
 from incidents import get_incidents
@@ -81,11 +81,17 @@ def read_load():
         return "UNKNOWN"
 
 
+_CPU_SAMPLER = CpuSampler()
+_CPU_SAMPLER.prime()
+
+
 def read_cpu_percent():
+    """CPU utilization averaged since the previous collector sample (~60 s); never blocks."""
     try:
-        return f"{psutil.cpu_percent(interval=0.3):.1f}%"
+        value = _CPU_SAMPLER.sample()
     except Exception:
         return "UNKNOWN"
+    return "UNKNOWN" if value is None else f"{value:.1f}%"
 
 
 def run_command(args):
